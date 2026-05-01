@@ -9,7 +9,7 @@ Usage:
     python transcribe_backfill.py              # full run
 """
 
-import json, os, time, tempfile, urllib.request
+import json, os, time, tempfile, urllib.request, urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
@@ -58,77 +58,46 @@ def needs_transcript(c):
 def get_audio_url(c):
     return c.get("audio") or c.get("recording_url") or c.get("record_url") or ""
 
-MIME_TYPES = {
-    ".mp3": "audio/mpeg",
-    ".mp4": "audio/mp4",
-    ".wav": "audio/wav",
-    ".m4a": "audio/mp4",
-    ".ogg": "audio/ogg",
-    ".webm": "audio/webm",
-}
-
 def whisper_transcribe(audio_url, call_id):
-    """Download audio then transcribe via OpenAI Whisper API with retry on 429."""
-    # Download audio — pass CTM auth in case URL requires it
+    """Download audio from CTM then transcribe via OpenAI Whisper SDK."""
+    from openai import OpenAI
+
+    # Download audio
     req = urllib.request.Request(audio_url, headers={
         "Authorization": f"Basic {AUTH}",
         "User-Agent": "CTM-Backfill/1.0"
     })
     with urllib.request.urlopen(req, timeout=60) as r:
         audio_bytes = r.read()
-        content_type = r.headers.get("Content-Type", "")
-
-    # Detect format from URL, then Content-Type header, then default to mp3
-    url_lower = audio_url.lower().split("?")[0]
-    suffix = next((s for s in MIME_TYPES if url_lower.endswith(s)), None)
-    if not suffix:
-        if "wav" in content_type:   suffix = ".wav"
-        elif "mp4" in content_type: suffix = ".mp4"
-        elif "ogg" in content_type: suffix = ".ogg"
-        else:                        suffix = ".mp3"
-    mime = MIME_TYPES[suffix]
 
     if len(audio_bytes) < 100:
         raise ValueError(f"Audio too small ({len(audio_bytes)} bytes) — likely empty or auth-gated")
+
+    # Detect suffix from URL
+    url_clean = audio_url.lower().split("?")[0]
+    suffix = next((s for s in (".mp3", ".mp4", ".wav", ".m4a", ".ogg", ".webm") if url_clean.endswith(s)), ".mp3")
 
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(audio_bytes)
         tmp_path = tmp.name
 
     try:
-        boundary = "----WBoundary"
-        parts = []
-        parts.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"model\"\r\n\r\nwhisper-1\r\n".encode())
-        parts.append(f"--{boundary}\r\nContent-Disposition: form-data; name=\"language\"\r\n\r\nen\r\n".encode())
-        parts.append(
-            f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"audio{suffix}\"\r\n"
-            f"Content-Type: {mime}\r\n\r\n".encode() + audio_bytes + b"\r\n"
-        )
-        parts.append(f"--{boundary}--\r\n".encode())
-        body = b"".join(parts)
-
-        req2 = urllib.request.Request(
-            "https://api.openai.com/v1/audio/transcriptions",
-            data=body,
-            headers={
-                "Authorization": f"Bearer {OPENAI_KEY}",
-                "Content-Type": f"multipart/form-data; boundary={boundary}",
-                "User-Agent": "CTM-Backfill/1.0"
-            }
-        )
-        # Retry up to 5 times on 429 with exponential backoff
+        client = OpenAI(api_key=OPENAI_KEY)
+        # Retry up to 5 times on rate limit
         for attempt in range(5):
             try:
-                with urllib.request.urlopen(req2, timeout=120) as r2:
-                    result = json.loads(r2.read())
-                return result.get("text", "").strip()
-            except urllib.error.HTTPError as e:
-                if e.code == 429 and attempt < 4:
-                    wait = 20 * (2 ** attempt)  # 20s, 40s, 80s, 160s
+                with open(tmp_path, "rb") as f:
+                    result = client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=f,
+                        language="en"
+                    )
+                return result.text.strip()
+            except Exception as e:
+                err = str(e)
+                if "429" in err and attempt < 4:
+                    wait = 20 * (2 ** attempt)
                     time.sleep(wait)
-                elif e.code == 400:
-                    err_body = e.read().decode("utf-8", errors="replace")
-                    raise ValueError(f"Whisper 400: {err_body}")
                 else:
                     raise
     finally:

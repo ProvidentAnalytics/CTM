@@ -23,6 +23,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install dependencies
+        run: pip install openai
+
       - name: Run backfill
         env:
           CTM_AUTH: ${{ secrets.CTM_AUTH }}
