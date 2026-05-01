@@ -74,7 +74,7 @@ def whisper_transcribe(audio_url, call_id):
         def redirect_request(self, req, fp, code, msg, headers, newurl):
             new_req = super().redirect_request(req, fp, code, msg, headers, newurl)
             if new_req and _up.urlparse(newurl).netloc != _up.urlparse(audio_url).netloc:
-                new_req.del_header("Authorization")
+                new_req.remove_header("Authorization")
             return new_req
 
     opener = urllib.request.build_opener(_NoRedirectAuth)
