@@ -19,7 +19,7 @@ OPENAI_KEY   = os.environ.get("OPENAI_API_KEY", "")
 BASE         = "https://api.calltrackingmetrics.com/api/v1/accounts/559323"
 OUT_FILE     = "data_backfill_transcripts.json"
 WORKERS      = 3
-DRY_RUN      = os.environ.get("DRY_RUN", "0") == "1"
+DRY_RUN      = os.environ.get("DRY_RUN", "0").lower() in ("1", "true")
 
 # Fetch all calls across all pages (no date filter — we want historical)
 def ctm_fetch(path, params=""):

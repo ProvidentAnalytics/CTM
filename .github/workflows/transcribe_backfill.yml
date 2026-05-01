@@ -34,7 +34,7 @@ jobs:
         run: python transcribe_backfill.py
 
       - name: Save transcripts as downloadable artifact
-        if: ${{ github.event.inputs.dry_run == 'false' }}
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: backfill-transcripts
@@ -42,7 +42,7 @@ jobs:
           retention-days: 30
 
       - name: Commit transcripts
-        if: ${{ github.event.inputs.dry_run == 'false' }}
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
