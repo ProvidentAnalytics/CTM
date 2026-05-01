@@ -3,7 +3,7 @@ process_data.py
 Processes raw CTM data into clean JSON blobs for the dashboard.
 Run once to generate all data files, or call from build_dashboard.py
 """
-import json
+import json, os
 from collections import defaultdict, Counter
 
 def get_fac(c):
@@ -165,10 +165,22 @@ def process_all(calls, forms_raw):
             })
 
     # ── 4. RECORDINGS ────────────────────────────────────────────────────
+    # Load backfilled transcripts (keyed by call ID string)
+    backfill = {}
+    if os.path.exists('data_backfill_transcripts.json'):
+        import json as _json
+        with open('data_backfill_transcripts.json') as _f:
+            backfill = _json.load(_f)
+
     recordings = []
     for c in calls:
         if c['direction'] != 'inbound': continue
         tr = (c.get('transcription_text','') or '').strip()
+        # Fall back to backfilled transcript if CTM has none
+        if not tr:
+            bf = backfill.get(str(c.get('id','')))
+            if bf:
+                tr = (bf.get('transcript','') or '').strip()
         if not tr: continue
         fac   = get_fac(c)
         dur_s = c.get('duration',0) or 0
