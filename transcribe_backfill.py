@@ -65,11 +65,8 @@ def whisper_transcribe(audio_url, call_id):
     global _debug_done
     from openai import OpenAI
 
-    # Download audio
-    req = urllib.request.Request(audio_url, headers={
-        "Authorization": f"Basic {AUTH}",
-        "User-Agent": "CTM-Backfill/1.0"
-    })
+    # Download audio — no auth header (CTM audio URLs are pre-signed S3 links)
+    req = urllib.request.Request(audio_url, headers={"User-Agent": "CTM-Backfill/1.0"})
     with urllib.request.urlopen(req, timeout=60) as r:
         audio_bytes = r.read()
         content_type = r.headers.get("Content-Type", "unknown")
