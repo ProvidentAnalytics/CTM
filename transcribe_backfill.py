@@ -18,7 +18,7 @@ AUTH         = os.environ.get("CTM_AUTH", "")
 OPENAI_KEY   = os.environ.get("OPENAI_API_KEY", "")
 BASE         = "https://api.calltrackingmetrics.com/api/v1/accounts/559323"
 OUT_FILE     = "data_backfill_transcripts.json"
-WORKERS      = 10
+WORKERS      = 3
 DRY_RUN      = os.environ.get("DRY_RUN", "0") == "1"
 
 # Fetch all calls across all pages (no date filter — we want historical)
@@ -59,7 +59,7 @@ def get_audio_url(c):
     return c.get("audio") or c.get("recording_url") or c.get("record_url") or ""
 
 def whisper_transcribe(audio_url, call_id):
-    """Download audio then transcribe via OpenAI Whisper API."""
+    """Download audio then transcribe via OpenAI Whisper API with retry on 429."""
     # Download to temp file
     req = urllib.request.Request(audio_url, headers={"User-Agent": "CTM-Backfill/1.0"})
     with urllib.request.urlopen(req, timeout=60) as r:
@@ -95,9 +95,18 @@ def whisper_transcribe(audio_url, call_id):
                 "User-Agent": "CTM-Backfill/1.0"
             }
         )
-        with urllib.request.urlopen(req2, timeout=120) as r2:
-            result = json.loads(r2.read())
-        return result.get("text", "").strip()
+        # Retry up to 5 times on 429 with exponential backoff
+        for attempt in range(5):
+            try:
+                with urllib.request.urlopen(req2, timeout=120) as r2:
+                    result = json.loads(r2.read())
+                return result.get("text", "").strip()
+            except urllib.error.HTTPError as e:
+                if e.code == 429 and attempt < 4:
+                    wait = 20 * (2 ** attempt)  # 20s, 40s, 80s, 160s
+                    time.sleep(wait)
+                else:
+                    raise
     finally:
         os.unlink(tmp_path)
 
