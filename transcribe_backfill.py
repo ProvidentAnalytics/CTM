@@ -71,7 +71,6 @@ def whisper_transcribe(audio_url, call_id):
         tmp_path = tmp.name
 
     try:
-        import urllib.parse
         boundary = "----WBoundary"
         with open(tmp_path, "rb") as f:
             audio_data = f.read()
