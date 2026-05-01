@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strive Recovery — CTM Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#0a3d5c; --teal:#3dffc0; --teal-dim:rgba(61,255,192,0.12);
+  --bg:#f4f6f9; --white:#fff; --border:#e1e7ef;
+  --text:#0f1923; --muted:#6b7e96;
+  --red:#ef4444; --amber:#f59e0b; --blue:#3b82f6; --green:#10b981; --purple:#8b5cf6;
+  --shadow:0 1px 3px rgba(10,61,92,.07),0 4px 14px rgba(10,61,92,.04);
+  --shadow-h:0 4px 12px rgba(10,61,92,.11),0 8px 28px rgba(10,61,92,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}
+.topbar{background:var(--navy);height:58px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(10,61,92,.25)}
+.tb-left{display:flex;align-items:center;gap:16px}
+.tb-logo{background:var(--teal);color:var(--navy);font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.08em;padding:5px 10px;border-radius:4px}
+.tb-title{color:#fff;font-size:15px;font-weight:600}
+.tb-sub{color:rgba(255,255,255,.4);font-size:11px;font-family:'Space Mono',monospace}
+.tb-right{display:flex;align-items:center;gap:12px}
+.live-pill{display:flex;align-items:center;gap:6px;background:rgba(61,255,192,.1);border:1px solid rgba(61,255,192,.25);border-radius:20px;padding:5px 12px;font-family:'Space Mono',monospace;font-size:10px;color:var(--teal)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.sync-lbl{font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,.35)}
+.btn-refresh{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);border-radius:6px;padding:6px 14px;color:#fff;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s}
+.btn-refresh:hover{background:rgba(255,255,255,.13)}
+.spin{display:inline-block}.spin.go{animation:rot 1s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.tab-nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 28px;display:flex;overflow-x:auto;position:sticky;top:58px;z-index:190;box-shadow:0 2px 8px rgba(10,61,92,.05)}
+.tab-nav::-webkit-scrollbar{height:3px}.tab-nav::-webkit-scrollbar-thumb{background:var(--border)}
+.tnav{padding:14px 18px;border:none;border-bottom:3px solid transparent;background:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .2s;margin-bottom:-1px}
+.tnav:hover{color:var(--navy)}
+.tnav.active{color:var(--navy);border-bottom-color:var(--teal);font-weight:700}
+.tab-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--teal-dim);color:var(--navy);font-family:'Space Mono',monospace;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:6px}
+.wrap{max-width:1380px;margin:0 auto;padding:24px 24px 60px}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.g1{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.g3{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:900px){.g2,.g3{grid-template-columns:1fr}}
+.ctrl-bar{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.ctrl-group{display:flex;gap:3px;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:3px}
+.ctrl-btn{padding:5px 13px;border-radius:5px;border:none;background:none;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.04em}
+.ctrl-btn.active{background:var(--navy);color:#fff}
+.ctrl-btn:hover:not(.active){background:rgba(10,61,92,.07);color:var(--navy)}
+.ctrl-sep{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);padding:0 4px;display:flex;align-items:center}
+.kpi-row{display:grid;gap:12px;margin-bottom:20px}
+.kpi{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0}
+.kpi.navy::before{background:var(--navy)}.kpi.teal::before{background:var(--teal)}
+.kpi.red::before{background:var(--red)}.kpi.amber::before{background:var(--amber)}
+.kpi.blue::before{background:var(--blue)}.kpi.green::before{background:var(--green)}
+.kpi-lbl{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.kpi-val{font-size:28px;font-weight:700;color:var(--navy);line-height:1;letter-spacing:-.03em;margin-bottom:4px}
+.kpi-sub{font-size:11px;color:var(--muted)}
+.card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:20px 22px;box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:8px}
+.card-title{font-size:13px;font-weight:700;color:var(--navy)}
+.card-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.chip{font-family:'Space Mono',monospace;font-size:9px;padding:3px 8px;border-radius:4px;background:var(--teal-dim);color:var(--navy);font-weight:700;letter-spacing:.05em}
+.scroll-chart{overflow-x:auto;width:100%}
+.scroll-chart::-webkit-scrollbar{height:4px}
+.scroll-chart::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.hm-outer{overflow-x:auto}
+.hm-grid{display:grid;gap:3px;min-width:520px}
+.hm-hrow{display:grid;grid-template-columns:72px repeat(7,1fr);gap:3px;margin-bottom:3px}
+.hm-row{display:grid;grid-template-columns:72px repeat(7,1fr);gap:3px}
+.hm-dlbl{font-size:9px;color:var(--muted);text-align:center;letter-spacing:.04em;text-transform:uppercase;font-family:'Space Mono',monospace}
+.hm-hlbl{font-size:9px;color:var(--muted);display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-family:'Space Mono',monospace}
+.hm-cell{border-radius:4px;height:22px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;cursor:default;font-family:'Space Mono',monospace}
+.agt{width:100%;border-collapse:collapse}
+.agt th{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 10px 9px 0;text-align:left;border-bottom:1px solid var(--border)}
+.agt td{padding:9px 10px 9px 0;font-size:13px;border-bottom:1px solid rgba(225,231,239,.5);vertical-align:middle}
+.agt tr:last-child td{border-bottom:none}
+.av{width:26px;height:26px;border-radius:50%;background:var(--navy);color:var(--teal);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Space Mono',monospace}
+.aname{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--navy)}
+.bar-track{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;min-width:50px}
+.bar-fill{height:100%;border-radius:3px;background:var(--navy)}
+.bar-row{display:flex;align-items:center;gap:7px}
+.rbadge{font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px}
+.rhi{background:rgba(16,185,129,.1);color:var(--green)}
+.rmd{background:rgba(245,158,11,.1);color:var(--amber)}
+.rlo{background:rgba(239,68,68,.1);color:var(--red)}
+.src-leg{display:flex;flex-direction:column;gap:9px}
+.src-row{display:flex;align-items:center;gap:9px}
+.src-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.src-name{flex:1;font-size:12px;font-weight:500}
+.src-pct{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);min-width:32px;text-align:right}
+.src-cnt{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--navy);min-width:38px;text-align:right}
+.dow-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.dow-lbl{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);width:28px;text-align:right}
+.dow-track{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.dow-fill{height:100%;border-radius:4px}
+.dow-val{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;color:var(--navy);min-width:28px}
+.missed-list{display:flex;flex-direction:column;gap:5px;max-height:360px;overflow-y:auto}
+.mitem{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg);border-radius:8px;border-left:3px solid var(--red)}
+.mtime{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap;min-width:110px}
+.mcaller{font-size:12px;font-weight:600;color:var(--navy);flex:1}
+.msrc{font-size:10px;color:var(--muted);background:var(--white);padding:2px 7px;border-radius:4px;border:1px solid var(--border)}
+.sla-card{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:8px}
+.fac-split{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.fac-big{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:22px 24px;box-shadow:var(--shadow)}
+.fac-name{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px}
+.fac-num{font-size:44px;font-weight:700;color:var(--navy);letter-spacing:-.04em;line-height:1}
+.fac-pct{font-size:13px;color:var(--muted);margin-top:4px}
+.fac-stat{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-top:1px solid var(--border)}
+.fac-stat-lbl{color:var(--muted)}
+.fac-stat-val{font-weight:700;color:var(--navy);font-family:'Space Mono',monospace;font-size:11px}
+.rec-item{background:var(--bg);border-radius:10px;padding:14px 16px;margin-bottom:8px;border:1px solid var(--border);cursor:pointer}
+.rec-item.open{border-color:var(--navy)}
+.rec-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rec-caller{font-weight:600;color:var(--navy);font-size:13px;flex:1}
+.rec-time{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)}
+.rec-dur{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);background:var(--white);padding:2px 7px;border-radius:4px;border:1px solid var(--border)}
+.rec-agent{font-size:11px;color:var(--muted);background:rgba(10,61,92,.07);padding:2px 8px;border-radius:4px}
+.rec-body{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.rec-body.open{display:block}
+.rec-summary{background:rgba(10,61,92,.05);border-left:3px solid var(--navy);border-radius:0 6px 6px 0;padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--navy);line-height:1.6;font-style:italic}
+.rec-transcript{font-size:12px;line-height:1.8;color:var(--text);max-height:180px;overflow-y:auto}
+.play-btn{display:inline-flex;align-items:center;gap:6px;background:var(--navy);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;margin-bottom:8px;text-decoration:none}
+.tbl-filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.tbl-search{flex:1;min-width:180px;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:8px 13px;font-size:12px;color:var(--text);outline:none}
+.tbl-search:focus{border-color:var(--navy)}
+.tbl-sel{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text);outline:none;cursor:pointer}
+.tbl-wrap{overflow-x:auto;max-height:520px;overflow-y:auto}
+.tbl-wrap::-webkit-scrollbar{width:5px;height:5px}.tbl-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.ltbl{width:100%;border-collapse:collapse;font-size:12px}
+.ltbl th{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 12px 9px 0;text-align:left;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--white);white-space:nowrap}
+.ltbl td{padding:8px 12px 8px 0;border-bottom:1px solid rgba(225,231,239,.4);vertical-align:middle;white-space:nowrap}
+.ltbl tr:hover td{background:rgba(244,246,249,.8)}
+.dir-in{color:var(--green);font-weight:700;font-size:10px;font-family:'Space Mono',monospace}
+.dir-out{color:var(--blue);font-weight:700;font-size:10px;font-family:'Space Mono',monospace}
+.st-ans{color:var(--green)}.st-mis{color:var(--red)}.st-oth{color:var(--muted)}
+.new-badge{background:rgba(61,255,192,.2);color:var(--navy);font-size:9px;font-family:'Space Mono',monospace;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:4px}
+.fac-fw{background:rgba(10,61,92,.1);color:var(--navy);font-size:10px;font-family:'Space Mono',monospace;font-weight:700;padding:2px 7px;border-radius:4px}
+.fac-wl{background:rgba(61,255,192,.2);color:#0a5c3d;font-size:10px;font-family:'Space Mono',monospace;font-weight:700;padding:2px 7px;border-radius:4px}
+.new-pill{background:rgba(16,185,129,.1);color:var(--green);font-size:10px;font-family:'Space Mono',monospace;font-weight:700;padding:2px 7px;border-radius:4px}
+.ret-pill{background:rgba(107,126,150,.1);color:var(--muted);font-size:10px;font-family:'Space Mono',monospace;font-weight:700;padding:2px 7px;border-radius:4px}
+.t-badge{font-family:'Space Mono',monospace;font-size:9px;background:rgba(59,130,246,.1);color:var(--blue);padding:1px 5px;border-radius:3px}
+.pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;font-family:'Space Mono',monospace;font-size:11px}
+.pager-btn{padding:5px 14px;border:1px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;color:var(--navy);font-weight:700;font-family:'Space Mono',monospace;font-size:11px}
+.pager-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.pager-info{color:var(--muted)}
+.note-row td{cursor:pointer}
+.note-cell{white-space:normal!important;line-height:1.6;max-width:500px}
+.note-preview{display:block}
+.note-full{display:none;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);color:#374151;white-space:normal}
+.note-row.expanded .note-full{display:block}
+.note-expand-icon{float:right;font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;margin-left:8px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-left">
+    <div class="tb-logo">STRIVE</div>
+    <div>
+      <div class="tb-title">CTM Call Analytics</div>
+      <div class="tb-sub">Provident Healthcare Consulting</div>
+    </div>
+  </div>
+  <div class="tb-right">
+    <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+    <div class="sync-lbl" id="syncLbl">—</div>
+    <button class="btn-refresh" onclick="doRefresh()"><span class="spin" id="spinEl">&#8635;</span> Refresh</button>
+  </div>
+</div>
+
+<div class="tab-nav" id="tabNav"></div>
+
+<div class="wrap">
+  <div id="tab-overview"   class="tab-panel active">
+    <div id="cb-overview"></div>
+    <div class="kpi-row" style="grid-template-columns:repeat(6,1fr)" id="ov-kpis"></div>
+    <div class="g1"><div class="card"><div class="card-h"><div><div class="card-title">Daily Call Volume</div><div class="card-sub">Inbound &middot; Outbound &middot; Missed</div></div><span class="chip" id="ov-chip">30 DAYS</span></div><div id="ov-daily-wrap"></div></div></div>
+    <div class="g2">
+      <div class="card"><div class="card-h"><div><div class="card-title">New Callers vs Missed</div><div class="card-sub">New leads &middot; Returning &middot; Missed</div></div></div><div id="ov-newmiss-wrap"></div></div>
+      <div class="card"><div class="card-h"><div><div class="card-title">Call Sources</div><div class="card-sub">Inbound attribution</div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center"><div style="height:160px"><canvas id="ov-source"></canvas></div><div class="src-leg" id="ov-src-leg"></div></div></div>
+    </div>
+    <div class="g1"><div class="card"><div class="card-h"><div><div class="card-title">Day of Week Volume</div><div class="card-sub">Total calls by weekday</div></div></div><div id="ov-dow"></div></div></div>
+  </div>
+  <div id="tab-agents"     class="tab-panel"><div id="cb-agents"></div><div class="kpi-row" style="grid-template-columns:repeat(4,1fr)" id="ag-kpis"></div><div class="g1"><div class="card"><div class="card-h"><div><div class="card-title">Agent Performance</div><div class="card-sub">Named agents &middot; Calls &middot; Answer rate &middot; Duration</div></div></div><table class="agt" id="agt-table"></table></div></div><div class="g2"><div class="card"><div class="card-h"><div><div class="card-title">Calls by Agent</div></div></div><div style="height:220px"><canvas id="agt-bar"></canvas></div></div><div class="card"><div class="card-h"><div><div class="card-title">Inbound vs Outbound</div></div></div><div style="height:220px"><canvas id="agt-mix"></canvas></div></div></div></div>
+  <div id="tab-sources"    class="tab-panel"><div id="cb-sources"></div><div class="kpi-row" style="grid-template-columns:repeat(4,1fr)" id="src-kpis"></div><div class="g2"><div class="card"><div class="card-h"><div><div class="card-title">Source Share</div><div class="card-sub">Numbers &amp; percentages</div></div></div><div style="height:280px"><canvas id="src-donut"></canvas></div></div><div class="card"><div class="card-h"><div><div class="card-title">Daily Volume by Source</div></div></div><div id="src-daily-wrap"></div></div></div><div class="g1"><div class="card"><div class="card-h"><div><div class="card-title">Tracking Numbers</div></div></div><table class="ltbl" id="tn-table"></table></div></div></div>
+  <div id="tab-heatmap"    class="tab-panel"><div id="cb-heatmap"></div><div class="kpi-row" style="grid-template-columns:repeat(4,1fr)" id="hm-kpis"></div><div class="g1"><div class="card"><div class="card-h"><div><div class="card-title">Inbound Call Heatmap</div><div class="card-sub">Deeper red = higher volume</div></div><span class="chip">INBOUND ONLY</span></div><div class="hm-outer" id="hm-container"></div></div></div><div class="g2"><div class="card"><div class="card-h"><div><div class="card-title">Hourly Distribution</div></div></div><div style="height:220px"><canvas id="hm-hourly"></canvas></div></div><div class="card"><div class="card-h"><div><div class="card-title">Weekday vs Weekend</div></div></div><div style="height:220px"><canvas id="hm-wknd"></canvas></div></div></div></div>
+  <div id="tab-missed"     class="tab-panel"><div id="cb-missed"></div><div class="kpi-row" style="grid-template-columns:repeat(4,1fr)" id="ms-kpis"></div><div class="g2"><div class="card"><div class="card-h"><div><div class="card-title">Missed Calls Log</div></div><span class="chip" id="ms-chip">—</span></div><div class="missed-list" id="missed-list"></div></div><div class="card"><div class="card-h"><div><div class="card-title">Daily Missed Trend</div></div></div><div id="miss-daily-wrap"></div><div style="margin-top:16px"><div class="sla-card" style="background:rgba(16,185,129,.06);border-left:3px solid var(--green)"><div style="font-size:18px">&#9889;</div><div><div style="font-size:12px;font-weight:700;color:var(--navy)">15-min callback SLA</div><div style="font-size:11px;color:var(--muted)">Call back within 15 min of missed call</div></div></div><div class="sla-card" style="background:rgba(245,158,11,.06);border-left:3px solid var(--amber)"><div style="font-size:18px">&#128222;</div><div><div style="font-size:12px;font-weight:700;color:var(--navy)">2 follow-up attempts min</div><div style="font-size:11px;color:var(--muted)">Minimum 2 outbound attempts per missed call</div></div></div><div class="sla-card" style="background:rgba(59,130,246,.06);border-left:3px solid var(--blue)"><div style="font-size:18px">&#128241;</div><div><div style="font-size:12px;font-weight:700;color:var(--navy)">Voicemail on attempt 1</div><div style="font-size:11px;color:var(--muted)">Leave VM on at least one outbound attempt</div></div></div></div></div></div></div>
+  <div id="tab-facility"   class="tab-panel"><div class="fac-split"><div class="fac-big"><div class="fac-name">&#127970; Fort Wayne</div><div class="fac-num">1,616</div><div class="fac-pct">91.1% of all calls</div><div style="margin-top:14px;display:flex;flex-direction:column;gap:0"><div class="fac-stat"><span class="fac-stat-lbl">Google Biz (static)</span><span class="fac-stat-val">(260) 261-2663</span></div><div class="fac-stat"><span class="fac-stat-lbl">Primary IVR</span><span class="fac-stat-val">(260) 308-6324</span></div><div class="fac-stat"><span class="fac-stat-lbl">Google Organic</span><span class="fac-stat-val">(260) 544-2260</span></div><div class="fac-stat"><span class="fac-stat-lbl">Google Ads</span><span class="fac-stat-val">(260) 544-6060</span></div></div></div><div class="fac-big"><div class="fac-name">&#127970; Waterloo</div><div class="fac-num">158</div><div class="fac-pct">8.9% of all calls</div><div style="margin-top:14px;display:flex;flex-direction:column;gap:0"><div class="fac-stat"><span class="fac-stat-lbl">Waterloo #1</span><span class="fac-stat-val">(319) 319-6661</span></div><div class="fac-stat"><span class="fac-stat-lbl">Waterloo #2</span><span class="fac-stat-val">(319) 323-1119</span></div><div class="fac-stat"><span class="fac-stat-lbl">Form submissions</span><span class="fac-stat-val">61 of 152</span></div></div></div></div><div class="g2"><div class="card"><div class="card-h"><div><div class="card-title">Volume by Facility</div></div></div><div style="height:250px"><canvas id="fac-donut"></canvas></div></div><div class="card"><div class="card-h"><div><div class="card-title">Daily Volume by Facility</div></div></div><div style="height:250px"><canvas id="fac-daily"></canvas></div></div></div><div class="g1"><div class="card"><div class="card-h"><div><div class="card-title">Day of Week — Both Facilities</div></div></div><div id="fac-dow"></div></div></div></div>
+  <div id="tab-newcallers" class="tab-panel"><div id="cb-newcallers"></div><div class="kpi-row" style="grid-template-columns:repeat(4,1fr)" id="nc-kpis"></div><div class="g2"><div class="card"><div class="card-h"><div><div class="card-title">New Callers Daily Trend</div></div></div><div id="nc-daily-wrap"></div></div><div class="card"><div class="card-h"><div><div class="card-title">New Callers by Day of Week</div></div></div><div style="height:220px"><canvas id="nc-dow"></canvas></div></div></div><div class="g2"><div class="card"><div class="card-h"><div><div class="card-title">New Callers by Hour</div></div></div><div style="height:220px"><canvas id="nc-hour"></canvas></div></div><div class="card"><div class="card-h"><div><div class="card-title">New Callers by Source</div></div></div><div style="height:220px"><canvas id="nc-source"></canvas></div></div></div></div>
+  <div id="tab-quality" class="tab-panel">
+    <div id="cb-quality"></div>
+    <div class="kpi-row" style="grid-template-columns:repeat(5,1fr)" id="qa-kpis"></div>
+
+    <div class="g2">
+      <div class="card"><div class="card-h"><div><div class="card-title">Score Distribution</div><div class="card-sub">Overall score buckets</div></div></div><div style="height:240px"><canvas id="qa-dist"></canvas></div></div>
+      <div class="card"><div class="card-h"><div><div class="card-title">Call Category Mix</div><div class="card-sub">Full Intake / Admissions Inquiry / Non-Admissions / Voicemail / Outbound</div></div></div><div style="height:240px"><canvas id="qa-cat"></canvas></div></div>
+    </div>
+
+    <div class="g1">
+      <div class="card">
+        <div class="card-h">
+          <div><div class="card-title">Agent Performance Matrix</div><div class="card-sub">Score per dimension &middot; Total calls &middot; Hours talked &middot; Score across time periods</div></div>
+        </div>
+        <div class="tbl-wrap" style="max-height:none">
+          <table class="ltbl" id="qa-matrix"></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="g1">
+      <div class="card">
+        <div class="card-h">
+          <div><div class="card-title">Score Trending</div><div class="card-sub">Time series by selected granularity (Day/Week/Month)</div></div>
+          <select class="tbl-sel" id="qa-trend-dim" onchange="renderQATrend()" style="max-width:200px">
+            <option value="overall">Overall Score</option>
+            <option value="rapport">Rapport</option>
+            <option value="needs">Needs Assessment</option>
+            <option value="insurance">Insurance Verification</option>
+            <option value="conversion">Conversion Discovery</option>
+            <option value="next_steps">Next Steps</option>
+            <option value="compliance">Compliance</option>
+          </select>
+        </div>
+        <div id="qa-trend-wrap"></div>
+      </div>
+    </div>
+
+    <div class="g1"><div class="card">
+      <div class="card-h">
+        <div><div class="card-title">All Analyzed Calls</div><div class="card-sub">Click any row for full breakdown, transcript, recording link</div></div>
+        <span class="chip" id="qa-chip">—</span>
+      </div>
+      <div class="tbl-filters">
+        <input type="text" class="tbl-search" id="qa-search" placeholder="Search agent, caller name, summary..." oninput="renderQA(1)">
+        <select class="tbl-sel" id="qa-agent-sel" onchange="renderQA(1)"><option value="">All Agents</option><option>Shreenda Johnson</option><option>Gabrielle Joyce</option><option>Louisse Cordero</option><option>Irvin Araos</option><option>Brittney Collins</option><option>Heath Terhune</option><option>Vadim Muchnik</option></select>
+        <select class="tbl-sel" id="qa-cat-sel" onchange="renderQA(1)">
+          <option value="">All Categories</option>
+          <option value="full_intake">Full Intake</option>
+          <option value="admissions_inquiry">Admissions Inquiry</option>
+          <option value="non_admissions">Non-Admissions</option>
+          <option value="voicemail">Voicemail</option>
+          <option value="outbound">Outbound</option>
+        </select>
+        <select class="tbl-sel" id="qa-sort-sel" onchange="renderQA(1)"><option value="best">Best First</option><option value="worst">Worst First</option><option value="recent">Most Recent</option></select>
+      </div>
+      <div id="qa-list"></div>
+      <div class="pager" id="qa-pager"></div>
+    </div></div>
+
+    <div class="g1">
+      <div class="card" style="background:#f9fafb">
+        <div class="card-h"><div><div class="card-title">Methodology &amp; Scoring Calculations</div><div class="card-sub">How calls are categorized and scored</div></div></div>
+        <div id="qa-methodology" style="font-size:13px;line-height:1.7;color:#374151"></div>
+      </div>
+    </div>
+  </div>
+  <div id="tab-recordings" class="tab-panel"><div id="cb-recordings"></div><div class="kpi-row" style="grid-template-columns:repeat(4,1fr)" id="rec-kpis"></div><div class="tbl-filters"><input type="text" class="tbl-search" id="rec-search" placeholder="Search name, summary, transcript..." oninput="renderRecs(1)"><select class="tbl-sel" id="rec-agent-sel" onchange="renderRecs(1)"><option value="">All Agents</option><option>Shreenda Johnson</option><option>Gabrielle Joyce</option><option>Louisse Cordero</option><option>Irvin Araos</option><option>Brittney Collins</option><option>Heath Terhune</option></select></div><div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px" id="rec-count"></div><div id="rec-list"></div><div class="pager" id="rec-pager"></div></div>
+  <div id="tab-calllog"    class="tab-panel"><div id="cb-calllog"></div><div class="tbl-filters"><input type="text" class="tbl-search" id="log-search" placeholder="Search name, number, city, agent..." oninput="renderLog(1)"><select class="tbl-sel" id="log-dir" onchange="renderLog(1)"><option value="">All Directions</option><option value="inbound">Inbound</option><option value="outbound">Outbound</option></select><select class="tbl-sel" id="log-status" onchange="renderLog(1)"><option value="">All Statuses</option><option value="answered">Answered</option><option value="no-answer">No Answer</option></select><select class="tbl-sel" id="log-new" onchange="renderLog(1)"><option value="">All Callers</option><option value="new">New Only</option></select></div><div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px" id="log-count"></div><div class="tbl-wrap"><table class="ltbl"><thead><tr><th>Date/Time</th><th>Dir</th><th>IVR</th><th>Number</th><th>Name</th><th>City</th><th>Source</th><th>Agent</th><th>Duration</th><th>Status</th><th>Fac</th><th>T</th></tr></thead><tbody id="log-body"></tbody></table></div><div class="pager" id="log-pager"></div></div>
+  <div id="tab-forms"      class="tab-panel"><div id="cb-forms"></div><div class="kpi-row" style="grid-template-columns:repeat(4,1fr)" id="fm-kpis"></div><div class="g2"><div class="card"><div class="card-h"><div><div class="card-title">Form Submissions Over Time</div></div></div><div id="form-daily-wrap"></div></div><div class="card"><div class="card-h"><div><div class="card-title">Forms by Facility</div></div></div><div style="height:200px"><canvas id="form-fac"></canvas></div></div></div><div class="g1"><div class="card"><div class="card-h"><div><div class="card-title">All Form Submissions</div></div><span class="chip" id="fm-chip">152</span></div><div class="tbl-filters"><input type="text" class="tbl-search" id="form-search" placeholder="Search name, email, message..." oninput="renderForms()"></div><div class="tbl-wrap" style="max-height:480px"><table class="ltbl"><thead><tr><th>Date</th><th>Name</th><th>How Can We Help?</th><th>Phone</th><th>Email</th><th>Location</th><th>Source</th><th>Facility</th><th>Type</th></tr></thead><tbody id="forms-tbody"></tbody></table></div></div></div></div>
+  <div id="tab-marketing"  class="tab-panel"><div id="cb-marketing"></div><div class="kpi-row" style="grid-template-columns:repeat(5,1fr)" id="mkt-kpis"></div><div class="g2"><div class="card"><div class="card-h"><div><div class="card-title">Call Volume Trend</div></div></div><div id="mkt-trend-wrap"></div></div><div class="card"><div class="card-h"><div><div class="card-title">Lead Score: Yes / No</div></div></div><div id="mkt-yesno-wrap"></div></div></div><div class="g2"><div class="card"><div class="card-h"><div><div class="card-title">Call Disposition</div></div></div><div style="height:240px"><canvas id="mkt-disp"></canvas></div></div><div class="card"><div class="card-h"><div><div class="card-title">Daily Lead Score Trend</div></div></div><div id="mkt-score-wrap"></div></div></div><div class="g2"><div class="card"><div class="card-h"><div><div class="card-title">Top Landing Pages</div></div></div><div style="height:240px"><canvas id="mkt-pages"></canvas></div></div><div class="card"><div class="card-h"><div><div class="card-title">Referrer Domains</div></div></div><div style="height:240px"><canvas id="mkt-refs"></canvas></div></div></div><div class="g1"><div class="card"><div class="card-h"><div><div class="card-title">Agent Call Notes</div></div><span class="chip" id="notes-chip">NOTES</span></div><div class="tbl-filters"><input type="text" class="tbl-search" id="notes-search" placeholder="Search notes, agent name..." oninput="renderNotes()"></div><div class="tbl-wrap" style="max-height:400px"><table class="ltbl"><thead><tr><th>Date</th><th>Agent</th><th>Fac</th><th>Note (click to expand)</th></tr></thead><tbody id="notes-tbody"></tbody></table></div></div></div></div>
+</div>
+
+<script>
+// DATA — replaced by build_clean.py
+var SD    = /*INJECT_SD*/null;
+var DAILY = /*INJECT_DAILY*/null;
+var RECS  = /*INJECT_RECS*/null;
+var LOG   = /*INJECT_LOG*/null;
+var FORMS = /*INJECT_FORMS*/null;
+var MKT   = /*INJECT_MKT*/null;
+var EXTRA = /*INJECT_EXTRA*/null;
+var HMD   = /*INJECT_HMD*/null;
+var CA    = /*INJECT_CA*/null;
+
+// CONSTANTS
+var DAYS  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+var HOURS = ['12AM','01AM','02AM','03AM','04AM','05AM','06AM','07AM','08AM','09AM','10AM','11AM','12PM','01PM','02PM','03PM','04PM','05PM','06PM','07PM','08PM','09PM','10PM','11PM'];
+var TABS  = ['overview','agents','sources','heatmap','missed','facility','newcallers','quality','recordings','calllog','forms','marketing'];
+var TAB_LABELS = ['Overview','Agent Performance','Sources & Attribution','Heatmap & Peak Hours','Missed Calls','Facility Split','New Callers / Leads','Call Quality','Recordings','Call Log','Contact Forms','Marketing & Trends'];
+var TAB_BADGES = {'calllog': LOG.length.toLocaleString(), 'forms': FORMS.length.toLocaleString(), 'quality': CA.length.toLocaleString()};
+var SRC_COLOR = {
+  'Google Business Profile - Static Number':'#0a3d5c',
+  'Direct':'#10b981',
+  'Google Organic':'#3b82f6',
+  'Google Ads':'#f59e0b',
+  'Unknown':'#8b5cf6'
+};
+
+Chart.defaults.font.family = 'DM Sans';
+Chart.defaults.color = '#6b7e96';
+var CHARTS = {};
+
+// FIX 3: Bar value labels plugin — shows numbers on bars without hovering
+var barValuePlugin = {
+  id: 'barValues',
+  afterDatasetsDraw: function(chart) {
+    var ctx = chart.ctx;
+    chart.data.datasets.forEach(function(dataset, di) {
+      if (dataset.type === 'line') return;
+      var meta = chart.getDatasetMeta(di);
+      if (meta.hidden) return;
+      meta.data.forEach(function(bar, idx) {
+        var val = dataset.data[idx];
+        if (!val || val === 0) return;
+        var label = val >= 1000 ? (val/1000).toFixed(1)+'k' : String(val);
+        var barH = Math.abs(bar.height || 0);
+        if (barH < 14) return;
+        ctx.save();
+        ctx.font = 'bold 8px Space Mono, monospace';
+        ctx.fillStyle = 'rgba(255,255,255,0.92)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, bar.x, bar.y + barH/2);
+        ctx.restore();
+      });
+    });
+  }
+};
+Chart.register(barValuePlugin);
+
+// FIX 3: Pie/donut label plugin — shows count only on segments
+var pieValuePlugin = { id: 'pieValues', afterDatasetsDraw: function(){} }; // deprecated, retained as no-op
+Chart.register(pieValuePlugin);
+
+// FIX 3: Data label plugin — shows values on bars AND pie/donut segments
+var dataLabelPlugin = {
+  id: 'dataLabels',
+  afterDatasetsDraw: function(chart) {
+    var ctx = chart.ctx;
+    var chartType = chart.config.type;
+
+    // Bar charts
+    if (chartType === 'bar') {
+      chart.data.datasets.forEach(function(dataset, di) {
+        if (dataset.type === 'line') return;
+        var meta = chart.getDatasetMeta(di);
+        if (meta.hidden) return;
+        meta.data.forEach(function(bar, idx) {
+          var val = dataset.data[idx];
+          if (!val || val === 0) return;
+          var label = val >= 1000 ? (val/1000).toFixed(1)+'k' : String(val);
+          ctx.save();
+          ctx.font = 'bold 9px Space Mono, monospace';
+          ctx.fillStyle = 'rgba(255,255,255,0.92)';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          if (bar.height && bar.height > 14) {
+            ctx.fillText(label, bar.x, bar.y + bar.height / 2);
+          }
+          ctx.restore();
+        });
+      });
+    }
+
+    // Line charts — show value labels at data points
+    if (chartType === 'line') {
+      chart.data.datasets.forEach(function(dataset, di) {
+        if (dataset.label === 'Trend') return; // skip trend lines
+        var meta = chart.getDatasetMeta(di);
+        if (meta.hidden) return;
+        meta.data.forEach(function(point, idx) {
+          var val = dataset.data[idx];
+          if (!val || val === 0) return;
+          var label = val >= 1000 ? (val/1000).toFixed(1)+'k' : String(val);
+          ctx.save();
+          ctx.font = '8px Space Mono, monospace';
+          ctx.fillStyle = dataset.borderColor || '#0a3d5c';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(label, point.x, point.y - 4);
+          ctx.restore();
+        });
+      });
+    }
+
+    // Pie / Doughnut charts — show count only, sized to fit the slice
+    if (chartType === 'doughnut' || chartType === 'pie') {
+      var total = chart.data.datasets[0].data.reduce(function(s,v){return s+(v||0);}, 0);
+      if (total === 0) return;
+      chart.data.datasets.forEach(function(dataset, di) {
+        var meta = chart.getDatasetMeta(di);
+        if (meta.hidden) return;
+        meta.data.forEach(function(arc, idx) {
+          var val = dataset.data[idx];
+          if (!val || val === 0) return;
+          var pct = val / total;
+          if (pct < 0.05) return; // skip tiny slices to avoid clutter
+          var sliceWidth = arc.outerRadius - arc.innerRadius;
+          if (sliceWidth < 14) return;
+          var angle = (arc.startAngle + arc.endAngle) / 2;
+          var r = (arc.innerRadius + arc.outerRadius) / 2;
+          var x = arc.x + r * Math.cos(angle);
+          var y = arc.y + r * Math.sin(angle);
+          // Size font based on slice thickness — never bigger than 12px
+          var fontSize = Math.max(9, Math.min(12, Math.floor(sliceWidth * 0.38)));
+          ctx.save();
+          ctx.font = 'bold ' + fontSize + 'px Space Mono, monospace';
+          ctx.fillStyle = 'rgba(255,255,255,0.96)';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(val.toLocaleString(), x, y);
+          ctx.restore();
+        });
+      });
+    }
+  }
+};
+Chart.register(dataLabelPlugin);
+
+// STATE
+var FAC = 'all', PERIOD = '30d', GRAN = 'day', IVR = 'all';
+
+// ── HELPERS ──────────────────────────────────────────────────────────────
+
+function mkChart(id, cfg) {
+  if (CHARTS[id]) { CHARTS[id].destroy(); }
+  var el = document.getElementById(id);
+  if (!el) return null;
+  CHARTS[id] = new Chart(el, cfg);
+  return CHARTS[id];
+}
+
+function kpi(label, val, sub, cls) {
+  return '<div class="kpi ' + cls + '"><div class="kpi-lbl">' + label + '</div><div class="kpi-val">' + val + '</div><div class="kpi-sub">' + sub + '</div></div>';
+}
+
+function shortSrc(s) {
+  return s.replace('Google Business Profile - Static Number', 'Google Business');
+}
+
+function fmtDur(s) {
+  if (!s) return '—';
+  return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+}
+
+function facLabel() {
+  return FAC === 'fw' ? 'Fort Wayne' : FAC === 'wl' ? 'Waterloo' : 'All Facilities';
+}
+
+function trendLine(data) {
+  var n = data.length;
+  if (n < 2) return data;
+  var sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  for (var i = 0; i < n; i++) { sumX += i; sumY += data[i]; sumXY += i * data[i]; sumX2 += i * i; }
+  var slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  var intercept = (sumY - slope * sumX) / n;
+  return data.map(function(_, x) { return Math.max(0, Math.round((slope * x + intercept) * 10) / 10); });
+}
+
+function scrollWrap(canvasId, height, n) {
+  var minW = Math.max(600, n * 28);
+  return '<div class="scroll-chart"><div style="min-width:' + minW + 'px;height:' + height + 'px"><canvas id="' + canvasId + '"></canvas></div></div>';
+}
+
+function dowBars(elId, data) {
+  var max = 1;
+  DAYS.forEach(function(d) { if ((data[d] || 0) > max) max = data[d]; });
+  var html = '';
+  DAYS.forEach(function(d) {
+    var v = data[d] || 0, pct = v / max * 100;
+    var col = pct > 80 ? '#0a3d5c' : pct > 50 ? '#3b82f6' : 'rgba(61,255,192,.8)';
+    html += '<div class="dow-row"><div class="dow-lbl">' + d.slice(0, 3).toUpperCase() + '</div><div class="dow-track"><div class="dow-fill" style="width:' + pct + '%;background:' + col + '"></div></div><div class="dow-val">' + v + '</div></div>';
+  });
+  document.getElementById(elId).innerHTML = html;
+}
+
+// ── PERIOD ────────────────────────────────────────────────────────────────
+
+function getPeriodDates() {
+  var all = Object.keys(DAILY).sort();
+  if (PERIOD === 'all') return all;
+  var days = PERIOD === '7d' ? 7 : 30;
+  var latest = new Date(all[all.length - 1] + 'T12:00:00');
+  var cutoff = new Date(latest);
+  cutoff.setDate(cutoff.getDate() - days + 1);
+  var cut = cutoff.toISOString().slice(0, 10);
+  return all.filter(function(d) { return d >= cut; });
+}
+
+function aggregateDates(dates) {
+  if (GRAN === 'day') return dates.map(function(d) { return { label: fmtLabel(d), dates: [d] }; });
+  if (GRAN === 'week') {
+    var weeks = {};
+    dates.forEach(function(d) {
+      var dt = new Date(d + 'T12:00:00');
+      var mon = new Date(dt);
+      mon.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+      var wk = mon.toISOString().slice(0, 10);
+      if (!weeks[wk]) weeks[wk] = [];
+      weeks[wk].push(d);
+    });
+    return Object.keys(weeks).sort().map(function(k) { return { label: 'W/' + fmtLabel(k), dates: weeks[k] }; });
+  }
+  if (GRAN === 'month') {
+    var months = {};
+    dates.forEach(function(d) {
+      var mk = d.slice(0, 7);
+      if (!months[mk]) months[mk] = [];
+      months[mk].push(d);
+    });
+    var mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return Object.keys(months).sort().map(function(k) { return { label: mn[parseInt(k.slice(5)) - 1] + ' ' + k.slice(2, 4), dates: months[k] }; });
+  }
+  return dates.map(function(d) { return { label: fmtLabel(d), dates: [d] }; });
+}
+
+function fmtLabel(d) {
+  var parts = d.split('-');
+  return parseInt(parts[1]) + '/' + parseInt(parts[2]);
+}
+
+function agg(dateBucket, key) {
+  var fkey = FAC === 'fw' ? 'fw_' + key : FAC === 'wl' ? 'wl_' + key : key;
+  return dateBucket.reduce(function(s, d) {
+    var row = DAILY[d];
+    if (!row) return s;
+    return s + (row[fkey] !== undefined ? row[fkey] : (row[key] || 0));
+  }, 0);
+}
+
+function getSrcTotals(dates) {
+  var totals = {};
+  dates.forEach(function(d) {
+    var row = DAILY[d];
+    if (!row || !row.src) return;
+    var totalIb = row.inbound || 1;
+    var facIb = FAC === 'fw' ? (row.fw_inbound || 0) : FAC === 'wl' ? (row.wl_inbound || 0) : totalIb;
+    var ratio = FAC === 'all' ? 1 : (totalIb > 0 ? facIb / totalIb : 0);
+    Object.keys(row.src).forEach(function(k) {
+      totals[k] = (totals[k] || 0) + Math.round(row.src[k] * ratio);
+    });
+  });
+  return Object.keys(totals).map(function(k) { return [k, totals[k]]; }).sort(function(a, b) { return b[1] - a[1]; });
+}
+
+// ── CONTROL BAR ───────────────────────────────────────────────────────────
+
+function buildCtrlBars() {
+  TABS.forEach(function(tab) {
+    var el = document.getElementById('cb-' + tab);
+    if (!el) return;
+    el.innerHTML = '';
+    var bar = document.createElement('div');
+    bar.className = 'ctrl-bar';
+
+    var fg = document.createElement('div'); fg.className = 'ctrl-group';
+    [['all','All Facilities'],['fw','Fort Wayne'],['wl','Waterloo']].forEach(function(p) {
+      var bf = document.createElement('button');
+      bf.className = 'ctrl-btn' + (FAC === p[0] ? ' active' : '');
+      bf.textContent = p[1];
+      bf.onclick = (function(f, t) { return function() { setFac(f, t); }; })(p[0], tab);
+      fg.appendChild(bf);
+    });
+
+    var s1 = document.createElement('div'); s1.className = 'ctrl-sep'; s1.textContent = '|';
+
+    var pg = document.createElement('div'); pg.className = 'ctrl-group';
+    [['7d','7D'],['30d','30D'],['all','ALL']].forEach(function(p) {
+      var bp = document.createElement('button');
+      bp.className = 'ctrl-btn' + (PERIOD === p[0] ? ' active' : '');
+      bp.textContent = p[1];
+      bp.onclick = (function(v, t) { return function() { setPeriod(v, t); }; })(p[0], tab);
+      pg.appendChild(bp);
+    });
+
+    var s2 = document.createElement('div'); s2.className = 'ctrl-sep'; s2.textContent = '|';
+
+    var gg = document.createElement('div'); gg.className = 'ctrl-group';
+    [['day','DAY'],['week','WEEK'],['month','MONTH']].forEach(function(p) {
+      var bg = document.createElement('button');
+      bg.className = 'ctrl-btn' + (GRAN === p[0] ? ' active' : '');
+      bg.textContent = p[1];
+      bg.onclick = (function(v, t) { return function() { setGran(v, t); }; })(p[0], tab);
+      gg.appendChild(bg);
+    });
+
+    var s3 = document.createElement('div'); s3.className = 'ctrl-sep'; s3.textContent = '|';
+
+    var ig = document.createElement('div'); ig.className = 'ctrl-group';
+    [['all','ALL CALLS'],['admissions','ADMISSIONS'],['building','NON-ADMISSIONS']].forEach(function(p) {
+      var bi = document.createElement('button');
+      bi.className = 'ctrl-btn' + (IVR === p[0] ? ' active' : '');
+      bi.textContent = p[1];
+      bi.onclick = (function(v, t) { return function() { setIvr(v, t); }; })(p[0], tab);
+      ig.appendChild(bi);
+    });
+
+    bar.appendChild(fg); bar.appendChild(s1); bar.appendChild(pg); bar.appendChild(s2); bar.appendChild(gg); bar.appendChild(s3); bar.appendChild(ig);
+    el.appendChild(bar);
+  });
+}
+
+function setFac(f, tab)    { FAC = f;    buildCtrlBars(); rebuildTab(tab); }
+function setPeriod(p, tab) { PERIOD = p; buildCtrlBars(); rebuildTab(tab); }
+function setGran(g, tab)   { GRAN = g;   buildCtrlBars(); rebuildTab(tab); }
+function setIvr(i, tab)    { IVR = i;    buildCtrlBars(); rebuildTab(tab); }
+
+// IVR filter helper — used everywhere that needs to respect Admissions/Non-Admissions slicer
+function passesIvr(item) {
+  if (IVR === 'all') return true;
+  var ivr = item.ivr || 'direct';
+  if (IVR === 'admissions') return ivr === 'admissions' || ivr === 'direct' || ivr === 'outbound';
+  if (IVR === 'building')   return ivr === 'building';
+  return true;
+}
+
+function rebuildTab(tab) {
+  CHARTS['built_' + tab] = false;
+  var btn = null;
+  document.querySelectorAll('.tnav').forEach(function(b) { if (b.dataset.tab === tab) btn = b; });
+  showTab(tab, btn);
+}
+
+// ── TAB NAV ──────────────────────────────────────────────────────────────
+
+function buildTabNav() {
+  var nav = document.getElementById('tabNav');
+  TABS.forEach(function(tab, i) {
+    var b = document.createElement('button');
+    b.className = 'tnav' + (tab === 'overview' ? ' active' : '');
+    b.dataset.tab = tab;
+    b.textContent = TAB_LABELS[i];
+    if (TAB_BADGES[tab]) {
+      var badge = document.createElement('span');
+      badge.className = 'tab-badge';
+      badge.textContent = TAB_BADGES[tab];
+      b.appendChild(badge);
+    }
+    b.onclick = (function(t, btn) { return function() { showTab(t, btn); }; })(tab, b);
+    nav.appendChild(b);
+  });
+}
+
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.tnav').forEach(function(b) { b.classList.remove('active'); });
+  var panel = document.getElementById('tab-' + name);
+  if (panel) panel.classList.add('active');
+  if (btn) btn.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (!CHARTS['built_' + name]) {
+    CHARTS['built_' + name] = true;
+    buildTab(name);
+  }
+}
+
+function buildTab(n) {
+  if      (n === 'overview')   buildOverview();
+  else if (n === 'agents')     buildAgents();
+  else if (n === 'sources')    buildSources();
+  else if (n === 'heatmap')    buildHeatmap();
+  else if (n === 'missed')     buildMissed();
+  else if (n === 'facility')   buildFacility();
+  else if (n === 'newcallers') buildNewCallers();
+  else if (n === 'quality')    buildQuality();
+  else if (n === 'recordings') { updateRecKPIs(); renderRecs(1); }
+  else if (n === 'calllog')    renderLog(1);
+  else if (n === 'forms')      { buildFormCharts(); renderForms(); }
+  else if (n === 'marketing')  buildMarketing();
+}
+
+// ── OVERVIEW ─────────────────────────────────────────────────────────────
+
+function buildOverview() {
+  var dates   = getPeriodDates();
+  var buckets = aggregateDates(dates);
+  var labels  = buckets.map(function(b) { return b.label; });
+
+  var chipEl = document.getElementById('ov-chip');
+  if (chipEl) chipEl.textContent = PERIOD === '7d' ? '7 DAYS' : PERIOD === 'all' ? 'ALL DATA' : '30 DAYS';
+
+  var total  = dates.reduce(function(s, d) { return s + agg([d], 'total'); }, 0);
+  var ib     = dates.reduce(function(s, d) { return s + agg([d], 'inbound'); }, 0);
+  var missed = dates.reduce(function(s, d) { return s + agg([d], 'missed'); }, 0);
+  var nw     = dates.reduce(function(s, d) { return s + agg([d], 'new'); }, 0);
+  var ob     = total - ib;
+
+  document.getElementById('ov-kpis').innerHTML =
+    kpi('Total Calls',  total.toLocaleString(),   facLabel(),                                            'navy') +
+    kpi('Inbound',      ib.toLocaleString(),       (total > 0 ? (ib/total*100).toFixed(1) : 0) + '% of total', 'teal') +
+    kpi('Answer Rate',  total > 0 ? ((total-missed)/total*100).toFixed(1)+'%' : '—', (total-missed).toLocaleString() + ' answered', 'blue') +
+    kpi('Missed',       missed.toLocaleString(),   (total > 0 ? (missed/total*100).toFixed(1) : 0) + '% miss rate', 'red') +
+    kpi('Outbound',     ob.toLocaleString(),       'Outbound calls', 'amber') +
+    kpi('New Callers',  nw.toLocaleString(),       (ib > 0 ? (nw/ib*100).toFixed(1) : 0) + '% of inbound', 'green');
+
+  var ibData = buckets.map(function(b) { return agg(b.dates, 'inbound'); });
+  document.getElementById('ov-daily-wrap').innerHTML = scrollWrap('ov-daily', 220, buckets.length);
+  mkChart('ov-daily', {type:'bar', data:{labels:labels, datasets:[
+    {label:'Inbound',  data:ibData, backgroundColor:'rgba(10,61,92,.75)', borderRadius:3, borderSkipped:false},
+    {label:'Outbound', data:buckets.map(function(b){return agg(b.dates,'outbound');}), backgroundColor:'rgba(61,255,192,.45)', borderRadius:3, borderSkipped:false},
+    {label:'Missed',  type:'line', data:buckets.map(function(b){return agg(b.dates,'missed');}), borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,.08)', borderWidth:2, pointRadius:2, tension:.3, fill:false, yAxisID:'y2'},
+    {label:'Trend',   type:'line', data:trendLine(ibData), borderColor:'rgba(10,61,92,.4)', borderWidth:1.5, pointRadius:0, tension:.4, fill:false, borderDash:[4,3], yAxisID:'y'}
+  ]}, options:{responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:10}}},
+    scales:{
+      x:{stacked:true,grid:{display:false},ticks:{font:{family:'Space Mono',size:8},maxRotation:45}},
+      y:{stacked:true,grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}}},
+      y2:{position:'right',grid:{display:false},ticks:{font:{family:'Space Mono',size:9},color:'#ef4444'},max:15}
+    }
+  }});
+
+  var retData = buckets.map(function(b) { return b.dates.reduce(function(s,d){return s+(EXTRA.returning_daily[d]||0);},0); });
+  document.getElementById('ov-newmiss-wrap').innerHTML = scrollWrap('ov-newmiss', 200, buckets.length);
+  mkChart('ov-newmiss', {type:'line', data:{labels:labels, datasets:[
+    {label:'New Callers',      data:buckets.map(function(b){return agg(b.dates,'new');}),    borderColor:'#0a3d5c', backgroundColor:'rgba(10,61,92,.07)',   borderWidth:2, pointRadius:2.5, tension:.3, fill:true},
+    {label:'Returning Callers',data:retData,                                                  borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.06)', borderWidth:2, pointRadius:2.5, tension:.3, fill:true},
+    {label:'Missed',           data:buckets.map(function(b){return agg(b.dates,'missed');}), borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,.05)',  borderWidth:2, pointRadius:2.5, tension:.3, fill:true}
+  ]}, options:{responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:10}}},
+    scales:{x:{grid:{display:false},ticks:{font:{family:'Space Mono',size:8},maxRotation:45}},y:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}},beginAtZero:true}}
+  }});
+
+  var srcArr   = getSrcTotals(dates);
+  var srcTotal = srcArr.reduce(function(s,p){return s+p[1];}, 0);
+  mkChart('ov-source', {type:'doughnut', data:{
+    labels:srcArr.map(function(p){return shortSrc(p[0]);}),
+    datasets:[{data:srcArr.map(function(p){return p[1];}), backgroundColor:srcArr.map(function(p){return SRC_COLOR[p[0]]||'#8b5cf6';}), borderWidth:2, borderColor:'#fff'}]
+  }, options:{responsive:true, maintainAspectRatio:false, cutout:'65%',
+    plugins:{legend:{display:false}, tooltip:{callbacks:{label:function(c){return ' '+c.label+': '+c.raw.toLocaleString()+' ('+( srcTotal>0?(c.raw/srcTotal*100).toFixed(1):0)+'%)';}}}}
+  }});
+  document.getElementById('ov-src-leg').innerHTML = srcArr.slice(0,4).map(function(p) {
+    return '<div class="src-row"><div class="src-dot" style="background:'+(SRC_COLOR[p[0]]||'#8b5cf6')+'"></div><div class="src-name">'+shortSrc(p[0])+'</div><div class="src-pct">'+(srcTotal>0?(p[1]/srcTotal*100).toFixed(0):0)+'%</div><div class="src-cnt">'+p[1].toLocaleString()+'</div></div>';
+  }).join('');
+
+  var dow = FAC === 'fw' ? SD.dow_fw : FAC === 'wl' ? SD.dow_wl : SD.dow_all;
+  dowBars('ov-dow', dow);
+}
+
+// ── AGENTS ───────────────────────────────────────────────────────────────
+
+function buildAgents() {
+  var dates = getPeriodDates();
+  var agMap = {};
+  dates.forEach(function(d) {
+    Object.keys(EXTRA.agent_daily).forEach(function(ag) {
+      var row = EXTRA.agent_daily[ag][d];
+      if (!row) return;
+      if (!agMap[ag]) agMap[ag] = {name:ag,total:0,inbound:0,outbound:0,answered:0,missed:0,dur:0,dur_n:0};
+      var s = agMap[ag];
+      s.total+=row.total; s.inbound+=row.inbound; s.outbound+=row.outbound;
+      s.answered+=row.answered; s.missed+=row.missed; s.dur+=row.dur; s.dur_n+=row.dur_n;
+    });
+  });
+
+  var agents = Object.values(agMap).map(function(s) {
+    var full  = SD.agents[s.name] || {};
+    var ratio = FAC==='fw'?(full.fw||0)/Math.max(full.total||1,1):FAC==='wl'?(full.wl||0)/Math.max(full.total||1,1):1;
+    s.facTotal = Math.round(s.total * ratio);
+    return s;
+  }).filter(function(a){return a.facTotal>0;}).sort(function(a,b){return b.facTotal-a.facTotal;});
+
+  var maxT  = Math.max.apply(null, agents.map(function(a){return a.facTotal;}));
+  var total = agents.reduce(function(s,a){return s+a.facTotal;},0);
+  var top   = agents[0] ? agents[0].name.split(' ')[0] : '—';
+
+  document.getElementById('ag-kpis').innerHTML =
+    kpi('Named Agents',    agents.length,     'Active in period', 'navy') +
+    kpi('Agent Calls',     total.toLocaleString(), facLabel(),    'blue') +
+    kpi('Avg Answer Rate', agents.length>0?Math.round(agents.reduce(function(s,a){return s+(a.answered/Math.max(a.total,1)*100);},0)/agents.length)+'%':'—', 'Named agents', 'green') +
+    kpi('Top Agent',       '<span style="font-size:18px">'+top+'</span>', (agents[0]?agents[0].facTotal:0)+' calls', 'amber');
+
+  document.getElementById('agt-table').innerHTML = '<thead><tr><th>Agent</th><th>Total</th><th>In/Out</th><th>Answer Rate</th><th>Avg Duration</th><th>Missed</th></tr></thead><tbody>' +
+    agents.map(function(a) {
+      var init = a.name.split(' ').map(function(x){return x[0];}).join('').slice(0,2);
+      var rate = Math.round(a.answered/Math.max(a.total,1)*100);
+      var rc   = rate>=98?'rhi':rate>=90?'rmd':'rlo';
+      var avg  = a.dur_n>0?a.dur/a.dur_n:0;
+      var ds   = avg>=60?Math.floor(avg/60)+'m '+Math.round(avg%60)+'s':Math.round(avg)+'s';
+      return '<tr><td><div class="aname"><div class="av">'+init+'</div>'+a.name+'</div></td>'
+        +'<td><div class="bar-row"><div class="bar-track"><div class="bar-fill" style="width:'+(a.facTotal/maxT*100)+'%"></div></div><span style="font-family:Space Mono,monospace;font-size:11px;font-weight:700;color:#0a3d5c">'+a.facTotal+'</span></div></td>'
+        +'<td style="font-family:Space Mono,monospace;font-size:11px;color:#6b7e96">'+a.inbound+'&darr; '+a.outbound+'&uarr;</td>'
+        +'<td><span class="rbadge '+rc+'">'+rate+'%</span></td>'
+        +'<td style="font-family:Space Mono,monospace;font-size:11px;color:#6b7e96">'+ds+'</td>'
+        +'<td style="font-family:Space Mono,monospace;font-size:11px;font-weight:700;color:'+(a.missed>0?'#ef4444':'#10b981')+'">'+a.missed+'</td></tr>';
+    }).join('') + '</tbody>';
+
+  var names = agents.map(function(a){return a.name.split(' ')[0];});
+  mkChart('agt-bar', {type:'bar', data:{labels:names, datasets:[{label:'Total', data:agents.map(function(a){return a.facTotal;}), backgroundColor:'rgba(10,61,92,.75)', borderRadius:6, borderSkipped:false}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}}}}}
+  });
+  mkChart('agt-mix', {type:'bar', data:{labels:names, datasets:[
+    {label:'Inbound',  data:agents.map(function(a){return a.inbound;}),  backgroundColor:'rgba(10,61,92,.7)',   borderRadius:4, borderSkipped:false},
+    {label:'Outbound', data:agents.map(function(a){return a.outbound;}), backgroundColor:'rgba(61,255,192,.6)', borderRadius:4, borderSkipped:false}
+  ]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:10}}},
+    scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:11}}},y:{stacked:true,grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}}}}}
+  });
+}
+
+// ── SOURCES ───────────────────────────────────────────────────────────────
+
+function buildSources() {
+  var dates   = getPeriodDates();
+  var srcArr  = getSrcTotals(dates);
+  var total   = srcArr.reduce(function(s,p){return s+p[1];},0);
+  var buckets = aggregateDates(dates);
+
+  document.getElementById('src-kpis').innerHTML = srcArr.slice(0,4).map(function(p,i) {
+    return kpi(shortSrc(p[0]), p[1].toLocaleString(), (total>0?(p[1]/total*100).toFixed(1):0)+'% of inbound', ['navy','blue','teal','amber'][i]);
+  }).join('');
+
+  mkChart('src-donut', {type:'doughnut', data:{
+    labels:srcArr.map(function(p){return shortSrc(p[0]);}),
+    datasets:[{data:srcArr.map(function(p){return p[1];}), backgroundColor:srcArr.map(function(p){return SRC_COLOR[p[0]]||'#8b5cf6';}), borderWidth:3, borderColor:'#fff'}]
+  }, options:{responsive:true, maintainAspectRatio:false, cutout:'55%',
+    plugins:{
+      legend:{position:'bottom', labels:{font:{size:11},boxWidth:10,padding:8,
+        generateLabels:function(chart){
+          return chart.data.labels.map(function(lbl,i){
+            return {text:lbl+'  '+chart.data.datasets[0].data[i].toLocaleString()+' ('+(total>0?(chart.data.datasets[0].data[i]/total*100).toFixed(0):0)+'%)',
+              fillStyle:chart.data.datasets[0].backgroundColor[i], strokeStyle:'#fff', lineWidth:2, index:i};
+          });
+        }
+      }},
+      tooltip:{callbacks:{label:function(c){return ' '+c.label+': '+c.raw.toLocaleString()+' ('+(c.raw/total*100).toFixed(1)+'%)'; }}}
+    }
+  }});
+
+  document.getElementById('src-daily-wrap').innerHTML = scrollWrap('src-daily', 240, buckets.length);
+  mkChart('src-daily', {type:'line', data:{labels:buckets.map(function(b){return b.label;}), datasets:srcArr.slice(0,4).map(function(p) {
+    var k = p[0];
+    return {
+      label:shortSrc(k),
+      data:buckets.map(function(b){
+        return b.dates.reduce(function(s,d){
+          var row=DAILY[d]; if(!row||!row.src) return s;
+          var totalIb=row.inbound||1, facIb=FAC==='fw'?(row.fw_inbound||0):FAC==='wl'?(row.wl_inbound||0):totalIb;
+          var fr=FAC==='all'?1:(totalIb>0?facIb/totalIb:0);
+          return s+Math.round((row.src[k]||0)*fr);
+        },0);
+      }),
+      borderColor:SRC_COLOR[k]||'rgba(139,92,246,0.7)',
+      backgroundColor:(SRC_COLOR[k]||'rgba(139,92,246,0.7)').replace(')',',0.08)').replace('rgb','rgba').replace('#0a3d5c','rgba(10,61,92,0.08)').replace('#10b981','rgba(16,185,129,0.08)').replace('#3b82f6','rgba(59,130,246,0.08)').replace('#f59e0b','rgba(245,158,11,0.08)').replace('#8b5cf6','rgba(139,92,246,0.08)'),
+      borderWidth:2, pointRadius:2, tension:.3, fill:true
+    };
+  })}, options:{responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:10}}},
+    scales:{x:{grid:{display:false},ticks:{font:{family:'Space Mono',size:8},maxRotation:45}},y:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}},beginAtZero:true}}
+  }});
+
+  var tns = FAC==='wl'?[['(319) 319-6661','Waterloo #1','Google Organic',98],['(319) 323-1119','Waterloo #2','Google Business',60]]:
+    FAC==='fw'?[['(260) 261-2663','Google Business (static)','Google Business',921],['(260) 308-6324','IVR/Internal','Direct',546],['(260) 544-2260','Google Organic FW','Google Organic',115],['(260) 544-6060','Google Ads FW','Google Ads',34]]:
+    [['(260) 261-2663','Google Business (static)','Google Business',921],['(260) 308-6324','IVR/Internal','Direct',546],['(260) 544-2260','Google Organic FW','Google Organic',115],['(319) 319-6661','Waterloo #1','Google Organic',98],['(319) 323-1119','Waterloo #2','Google Business',60],['(260) 544-6060','Google Ads FW','Google Ads',34]];
+  var tnT = tns.reduce(function(s,t){return s+t[3];},0);
+  document.getElementById('tn-table').innerHTML = '<thead><tr><th>Number</th><th>Label</th><th>Source</th><th>Calls</th><th>Share</th></tr></thead><tbody>' +
+    tns.map(function(t){return '<tr><td style="font-family:Space Mono,monospace;font-size:11px;font-weight:700;color:#0a3d5c">'+t[0]+'</td><td style="font-size:12px;color:#6b7e96">'+t[1]+'</td><td style="font-size:11px;color:#6b7e96">'+t[2]+'</td><td style="font-family:Space Mono,monospace;font-size:11px;font-weight:700;color:#0a3d5c">'+t[3].toLocaleString()+'</td><td style="font-family:Space Mono,monospace;font-size:10px;color:#6b7e96">'+(t[3]/tnT*100).toFixed(1)+'%</td></tr>';}).join('') + '</tbody>';
+}
+
+// ── HEATMAP ───────────────────────────────────────────────────────────────
+
+function buildHeatmap() {
+  var dates = getPeriodDates();
+  var hm = {};
+  dates.forEach(function(d) {
+    var dayData = HMD[d] || {};
+    Object.keys(dayData).forEach(function(key) {
+      var val = dayData[key];
+      if (key.indexOf('_fac_') === 0) {
+        var isFw = key.indexOf('_fac_fw_') === 0;
+        var isWl = key.indexOf('_fac_wl_') === 0;
+        if (FAC === 'fw' && !isFw) return;
+        if (FAC === 'wl' && !isWl) return;
+        var realKey = key.replace('_fac_fw_','').replace('_fac_wl_','');
+        hm[realKey] = (hm[realKey]||0) + val;
+      } else if (FAC === 'all') {
+        hm[key] = (hm[key]||0) + val;
+      }
+    });
+  });
+
+  var vals = Object.values(hm).filter(function(v){return v>0;});
+  var maxV = vals.length > 0 ? Math.max.apply(null, vals) : 1;
+  var hourTotals = {}, dowTotals = {};
+  HOURS.forEach(function(h){ hourTotals[h]=DAYS.reduce(function(s,d){return s+(hm[d+'|'+h]||0);},0); });
+  DAYS.forEach(function(d){  dowTotals[d] =HOURS.reduce(function(s,h){return s+(hm[d+'|'+h]||0);},0); });
+  var peakHour = HOURS.reduce(function(a,b){return (hourTotals[a]||0)>=(hourTotals[b]||0)?a:b;});
+  var peakDay  = DAYS.reduce(function(a,b){return (dowTotals[a]||0)>=(dowTotals[b]||0)?a:b;});
+  var hotV=0, hotC='';
+  Object.keys(hm).forEach(function(k){if(hm[k]>hotV){hotV=hm[k];hotC=k.replace('|',' ');}});
+  var dow = FAC==='fw'?SD.dow_fw:FAC==='wl'?SD.dow_wl:SD.dow_all;
+  var wkend = (dow['Saturday']||0)+(dow['Sunday']||0);
+
+  document.getElementById('hm-kpis').innerHTML =
+    kpi('Peak Hour',      peakHour,                            'Highest call density', 'navy') +
+    kpi('Busiest Day',    '<span style="font-size:20px">'+peakDay+'</span>', (dowTotals[peakDay]||0)+' calls', 'teal') +
+    kpi('Hottest Cell',   '<span style="font-size:18px">'+hotC+'</span>', hotV+' calls', 'blue') +
+    kpi('Weekend Volume', wkend.toLocaleString(), 'Sat + Sun', 'amber');
+
+  var gridHtml = '<div class="hm-grid"><div class="hm-hrow"><div></div>';
+  DAYS.forEach(function(d){gridHtml+='<div class="hm-dlbl">'+d.slice(0,3)+'</div>';});
+  gridHtml += '</div>';
+  HOURS.forEach(function(h){
+    gridHtml += '<div class="hm-row"><div class="hm-hlbl">'+h+'</div>';
+    DAYS.forEach(function(d){
+      var v = hm[d+'|'+h]||0, p = v/maxV;
+      var bg = v===0?'rgba(245,245,245,0.5)':'rgba(239,68,68,'+(0.06+p*0.92).toFixed(2)+')';
+      var tc = p>0.55?'rgba(255,255,255,.95)':p>0.15?'rgba(160,20,20,.9)':'transparent';
+      gridHtml += '<div class="hm-cell" style="background:'+bg+';color:'+tc+'" title="'+d+' '+h+': '+v+' calls">'+(v>0?v:'')+'</div>';
+    });
+    gridHtml += '</div>';
+  });
+  gridHtml += '</div>';
+  document.getElementById('hm-container').innerHTML = gridHtml;
+
+  var maxHr = Math.max.apply(null, Object.values(hourTotals));
+  mkChart('hm-hourly', {type:'bar', data:{labels:HOURS, datasets:[{label:'Calls',
+    data:HOURS.map(function(h){return hourTotals[h];}),
+    backgroundColor:HOURS.map(function(h){var p=(hourTotals[h]||0)/maxHr;return p>0.8?'rgba(239,68,68,0.85)':p>0.5?'rgba(239,68,68,0.55)':'rgba(239,68,68,0.25)';}),
+    borderRadius:5, borderSkipped:false
+  }]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{family:'Space Mono',size:9},maxRotation:45}},y:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}}}}}});
+
+  var wkday = DAYS.slice(0,5).reduce(function(s,d){return s+(dow[d]||0);},0);
+  var wknd2 = DAYS.slice(5).reduce(function(s,d){return s+(dow[d]||0);},0);
+  mkChart('hm-wknd', {type:'doughnut', data:{labels:['Weekday (Mon-Fri)','Weekend (Sat-Sun)'],datasets:[{data:[wkday,wknd2],backgroundColor:['#0a3d5c','#3dffc0'],borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:10}}}}});
+}
+
+// ── MISSED ────────────────────────────────────────────────────────────────
+
+function buildMissed() {
+  var dates   = getPeriodDates();
+  var buckets = aggregateDates(dates);
+  var total   = dates.reduce(function(s,d){return s+agg([d],'missed');},0);
+  var ib      = dates.reduce(function(s,d){return s+agg([d],'inbound');},0);
+  var worst   = dates.reduce(function(a,d){return agg([d],'missed')>agg([a],'missed')?d:a;}, dates[0]||'—');
+
+  document.getElementById('ms-kpis').innerHTML =
+    kpi('Total Missed', total, 'No-answer + busy', 'red') +
+    kpi('Miss Rate', ib>0?(total/ib*100).toFixed(1)+'%':'0%', 'Of inbound', 'amber') +
+    kpi('Avg / Day', (total/Math.max(dates.length,1)).toFixed(1), 'Over '+dates.length+' days', 'navy') +
+    kpi('Worst Day', '<span style="font-size:18px">'+(worst.slice?worst.slice(5):worst)+'</span>', agg([worst],'missed')+' missed', 'blue');
+
+  var log = SD.missed_all.filter(function(m){return FAC==='all'||(FAC==='fw'&&m.fa==='Fort Wayne')||(FAC==='wl'&&m.fa==='Waterloo');});
+  document.getElementById('ms-chip').textContent = log.length + ' TOTAL';
+  document.getElementById('missed-list').innerHTML = log.map(function(m){
+    return '<div class="mitem"><div class="mtime">'+m.time+'</div><div class="mcaller">'+m.caller+'</div><div class="msrc">'+m.source+'</div></div>';
+  }).join('');
+
+  document.getElementById('miss-daily-wrap').innerHTML = scrollWrap('miss-daily', 180, buckets.length);
+  mkChart('miss-daily', {type:'bar', data:{labels:buckets.map(function(b){return b.label;}), datasets:[{label:'Missed',
+    data:buckets.map(function(b){return agg(b.dates,'missed');}),
+    backgroundColor:buckets.map(function(b){var v=agg(b.dates,'missed');return v>=7?'#ef4444':v>=4?'#f59e0b':'rgba(239,68,68,.4)';}),
+    borderRadius:5, borderSkipped:false
+  }]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{family:'Space Mono',size:8},maxRotation:45}},y:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}},beginAtZero:true}}}});
+}
+
+// ── FACILITY ──────────────────────────────────────────────────────────────
+
+function buildFacility() {
+  mkChart('fac-donut', {type:'doughnut', data:{labels:['Fort Wayne (260)','Waterloo (319)'],datasets:[{data:[1616,158],backgroundColor:['#0a3d5c','#3dffc0'],borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:10}}}}});
+  var allDates = Object.keys(DAILY).sort();
+  var lbls = allDates.map(function(d){var p=d.split('-');return parseInt(p[1])+'/'+parseInt(p[2]);});
+  mkChart('fac-daily', {type:'line', data:{labels:lbls, datasets:[
+    {label:'Fort Wayne',data:allDates.map(function(d){return DAILY[d]?DAILY[d].fw_total||0:0;}),borderColor:'#0a3d5c',backgroundColor:'rgba(10,61,92,.07)',borderWidth:2,pointRadius:1.5,tension:.3,fill:true},
+    {label:'Waterloo',  data:allDates.map(function(d){return DAILY[d]?DAILY[d].wl_total||0:0;}),borderColor:'#3dffc0',backgroundColor:'rgba(61,255,192,.07)',borderWidth:2,pointRadius:1.5,tension:.3,fill:true}
+  ]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:10}}},scales:{x:{grid:{display:false},ticks:{font:{family:'Space Mono',size:8},maxRotation:45}},y:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}}}}}});
+  dowBars('fac-dow', SD.dow_all);
+}
+
+// ── NEW CALLERS ───────────────────────────────────────────────────────────
+
+function buildNewCallers() {
+  var dates   = getPeriodDates();
+  var buckets = aggregateDates(dates);
+  var total   = dates.reduce(function(s,d){return s+agg([d],'new');},0);
+  var ib      = dates.reduce(function(s,d){return s+agg([d],'inbound');},0);
+
+  var ncDow={}, ncHr={}, ncSrc={};
+  dates.forEach(function(d){
+    var detail=EXTRA.nc_daily_detail[d]; if(!detail) return;
+    var row=DAILY[d]||{}, totalIb=row.inbound||1;
+    var facIb=FAC==='fw'?(row.fw_inbound||0):FAC==='wl'?(row.wl_inbound||0):totalIb;
+    var ratio=FAC==='all'?1:(totalIb>0?facIb/totalIb:0);
+    Object.keys(detail.dow||{}).forEach(function(k){ncDow[k]=(ncDow[k]||0)+Math.round((detail.dow[k]||0)*ratio);});
+    Object.keys(detail.hour||{}).forEach(function(k){ncHr[k]=(ncHr[k]||0)+Math.round((detail.hour[k]||0)*ratio);});
+    Object.keys(detail.src||{}).forEach(function(k){ncSrc[k]=(ncSrc[k]||0)+Math.round((detail.src[k]||0)*ratio);});
+  });
+  var peakDay = DAYS.reduce(function(a,b){return (ncDow[a]||0)>=(ncDow[b]||0)?a:b;});
+
+  document.getElementById('nc-kpis').innerHTML =
+    kpi('New Callers', total.toLocaleString(), facLabel(), 'green') +
+    kpi('Avg / Day', (total/Math.max(dates.length,1)).toFixed(1), 'New leads/day', 'navy') +
+    kpi('New Caller Rate', ib>0?(total/ib*100).toFixed(1)+'%':'0%', 'Of inbound', 'teal') +
+    kpi('Peak Day', '<span style="font-size:20px">'+peakDay+'</span>', (ncDow[peakDay]||0)+' new callers', 'blue');
+
+  var ncData = buckets.map(function(b){return agg(b.dates,'new');});
+  document.getElementById('nc-daily-wrap').innerHTML = scrollWrap('nc-daily', 200, buckets.length);
+  mkChart('nc-daily', {type:'bar', data:{labels:buckets.map(function(b){return b.label;}), datasets:[
+    {label:'New Callers', data:ncData, backgroundColor:'rgba(16,185,129,.6)', borderRadius:4, borderSkipped:false},
+    {label:'Trend', type:'line', data:trendLine(ncData), borderColor:'#0a3d5c', borderWidth:2, pointRadius:0, tension:.4, fill:false, borderDash:[5,3]}
+  ]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:10}}},scales:{x:{grid:{display:false},ticks:{font:{family:'Space Mono',size:8},maxRotation:45}},y:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}},beginAtZero:true}}}});
+
+  mkChart('nc-dow', {type:'bar', data:{labels:DAYS.map(function(d){return d.slice(0,3);}), datasets:[{label:'New Callers',
+    data:DAYS.map(function(d){return ncDow[d]||0;}),
+    backgroundColor:DAYS.map(function(_,i){return i<5?'rgba(10,61,92,.75)':'rgba(61,255,192,.6)';}), borderRadius:5, borderSkipped:false
+  }]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}},beginAtZero:true}}}});
+
+  var hrs = HOURS.filter(function(h){return ncHr[h];});
+  var maxHr2 = hrs.length>0?Math.max.apply(null,hrs.map(function(h){return ncHr[h];})):1;
+  mkChart('nc-hour', {type:'bar', data:{labels:hrs, datasets:[{label:'New Callers',
+    data:hrs.map(function(h){return ncHr[h]||0;}),
+    backgroundColor:hrs.map(function(h){var p=(ncHr[h]||0)/maxHr2;return p>0.8?'#0a3d5c':p>0.5?'#3b82f6':'rgba(61,255,192,.7)';}), borderRadius:5, borderSkipped:false
+  }]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{family:'Space Mono',size:9},maxRotation:45}},y:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}},beginAtZero:true}}}});
+
+  var srcE = Object.keys(ncSrc).map(function(k){return [k,ncSrc[k]];}).sort(function(a,b){return b[1]-a[1];});
+  mkChart('nc-source', {type:'doughnut', data:{labels:srcE.map(function(p){return shortSrc(p[0]);}), datasets:[{data:srcE.map(function(p){return p[1];}),backgroundColor:srcE.map(function(p){return SRC_COLOR[p[0]]||'#8b5cf6';}),borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:10}}}}});
+}
+
+// ── CALL QUALITY ──────────────────────────────────────────────────────────
+
+function getScoreColor(s) {
+  if (s === 'N/A' || s == null) return '#94a3b8';
+  if (s >= 7) return '#10b981';
+  if (s >= 5) return '#f59e0b';
+  return '#ef4444';
+}
+
+function fmtScore(s) {
+  if (s === 'N/A' || s == null) return 'N/A';
+  return Number(s).toFixed(1);
+}
+
+function avgScores(rows, dim) {
+  // Average a dimension, treating N/A as excluded (not zero)
+  var vals = [];
+  rows.forEach(function(a) {
+    var v = a.scores[dim];
+    if (v !== 'N/A' && v != null) vals.push(v);
+  });
+  if (!vals.length) return null;
+  return vals.reduce(function(s,v){return s+v;}, 0) / vals.length;
+}
+
+// Filter calls by FAC + IVR + period (used everywhere on this tab)
+function getQAFiltered() {
+  var dates = getPeriodDates();
+  var dateSet = new Set(dates);
+  return CA.filter(function(a) {
+    if (FAC === 'fw' && a.fac !== 'Fort Wayne') return false;
+    if (FAC === 'wl' && a.fac !== 'Waterloo')   return false;
+    if (!dateSet.has(a.dt.slice(0,10))) return false;
+    if (!passesIvr({ivr: a.ivr})) return false;
+    return true;
+  });
+}
+
+function buildQuality() {
+  var rows = getQAFiltered();
+  var n = rows.length;
+  var avg = avgScores(rows, 'overall') || 0;
+  var top = rows.filter(function(a){return a.scores.overall !== 'N/A' && a.scores.overall >= 7;}).length;
+  var low = rows.filter(function(a){return a.scores.overall !== 'N/A' && a.scores.overall < 5;}).length;
+  var crisis = rows.filter(function(a){return a.urgent;}).length;
+
+  document.getElementById('qa-kpis').innerHTML =
+    kpi('Calls Analyzed', n.toLocaleString(),         facLabel(),                              'navy') +
+    kpi('Avg Score',      fmtScore(avg) + '/10',      'Calibrated by category',                'teal') +
+    kpi('High Quality',   top.toLocaleString(),       n>0 ? (top/n*100).toFixed(0)+'%' : '0%', 'green') +
+    kpi('Needs Review',   low.toLocaleString(),       n>0 ? (low/n*100).toFixed(0)+'%' : '0%', 'red') +
+    kpi('Urgent Calls',   crisis.toLocaleString(),    'Crisis indicators detected',            'amber');
+
+  // Distribution
+  var buckets = [0,0,0,0,0];
+  rows.forEach(function(a){
+    if (a.scores.overall === 'N/A') return;
+    var i = Math.min(4, Math.floor(a.scores.overall/2));
+    buckets[i]++;
+  });
+  mkChart('qa-dist', {type:'bar', data:{
+    labels:['0-2 (Poor)','2-4 (Below)','4-6 (Avg)','6-8 (Good)','8-10 (Excellent)'],
+    datasets:[{label:'Calls',data:buckets,backgroundColor:['#ef4444','#f59e0b','#facc15','#84cc16','#10b981'],borderRadius:5,borderSkipped:false}]
+  }, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{beginAtZero:true,grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}}}}}});
+
+  // Category mix
+  var catCount = {full_intake:0, admissions_inquiry:0, non_admissions:0, voicemail:0, outbound:0};
+  rows.forEach(function(a){if(catCount[a.category]!==undefined) catCount[a.category]++;});
+  mkChart('qa-cat', {type:'doughnut', data:{
+    labels:['Full Intake','Admissions Inquiry','Non-Admissions','Voicemail','Outbound'],
+    datasets:[{data:[catCount.full_intake,catCount.admissions_inquiry,catCount.non_admissions,catCount.voicemail,catCount.outbound],
+      backgroundColor:['#10b981','#3b82f6','#f59e0b','#94a3b8','#0a3d5c'],borderWidth:3,borderColor:'#fff'}]
+  }, options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:8}}}}});
+
+  buildAgentMatrix(rows);
+  renderQATrend();
+  renderMethodology();
+  renderQA(1);
+}
+
+// AGENT PERFORMANCE MATRIX — agents x [calls, hours, dimensions, period scores]
+function buildAgentMatrix(rows) {
+  // Group by agent
+  var byAgent = {};
+  rows.forEach(function(a){
+    if (!a.agent || a.agent === 'Unanswered') return;
+    if (!byAgent[a.agent]) byAgent[a.agent] = [];
+    byAgent[a.agent].push(a);
+  });
+
+  // Date helpers (relative to latest data, not today)
+  var allDates = Object.keys(DAILY).sort();
+  var latestDate = allDates[allDates.length-1];
+  function daysBack(n) {
+    var d = new Date(latestDate + 'T12:00:00');
+    d.setDate(d.getDate() - n);
+    return d.toISOString().slice(0,10);
+  }
+  var TODAY = latestDate;
+  var YESTERDAY = daysBack(1);
+  var SEVEN_AGO = daysBack(6);
+  var THIRTY_AGO = daysBack(29);
+
+  function periodAvg(arr, fromDate, toDate) {
+    var filt = arr.filter(function(a){
+      var d = a.dt.slice(0,10);
+      return d >= fromDate && d <= toDate && a.scores.overall !== 'N/A';
+    });
+    if (!filt.length) return null;
+    return filt.reduce(function(s,a){return s+a.scores.overall;},0)/filt.length;
+  }
+
+  // Build rows for each agent
+  var agents = Object.keys(byAgent).map(function(name){
+    var arr = byAgent[name];
+    var ib = arr.filter(function(a){return a.dir==='inbound';}).length;
+    var ob = arr.filter(function(a){return a.dir==='outbound';}).length;
+    var hours = arr.reduce(function(s,a){return s+(a.duration||0);},0) / 3600;
+    return {
+      name: name,
+      n: arr.length,
+      ib: ib,
+      ob: ob,
+      hours: hours,
+      rapport:    avgScores(arr, 'rapport'),
+      needs:      avgScores(arr, 'needs'),
+      insurance:  avgScores(arr, 'insurance'),
+      conversion: avgScores(arr, 'conversion'),
+      next_steps: avgScores(arr, 'next_steps'),
+      compliance: avgScores(arr, 'compliance'),
+      overall:    avgScores(arr, 'overall'),
+      today:     periodAvg(arr, TODAY, TODAY),
+      yesterday: periodAvg(arr, YESTERDAY, YESTERDAY),
+      week:      periodAvg(arr, SEVEN_AGO, TODAY),
+      month:     periodAvg(arr, THIRTY_AGO, TODAY),
+      all:       avgScores(arr, 'overall')
+    };
+  }).sort(function(a,b){return (b.overall||0) - (a.overall||0);});
+
+  function cell(v, isOverall) {
+    if (v == null) return '<td style="text-align:center;color:#94a3b8;font-family:Space Mono,monospace;font-size:10px">N/A</td>';
+    var col = getScoreColor(v);
+    var weight = isOverall ? '700' : '600';
+    return '<td style="text-align:center;color:'+col+';font-weight:'+weight+';font-family:Space Mono,monospace;font-size:11px">'+v.toFixed(1)+'</td>';
+  }
+
+  var html = '<thead><tr>'
+    + '<th style="text-align:left">Agent</th>'
+    + '<th style="text-align:center">Calls</th>'
+    + '<th style="text-align:center">In</th>'
+    + '<th style="text-align:center">Out</th>'
+    + '<th style="text-align:center">Hours</th>'
+    + '<th style="text-align:center;background:#f0f9ff">Rapport</th>'
+    + '<th style="text-align:center;background:#f0f9ff">Needs</th>'
+    + '<th style="text-align:center;background:#f0f9ff">Insurance</th>'
+    + '<th style="text-align:center;background:#f0f9ff">Conversion</th>'
+    + '<th style="text-align:center;background:#f0f9ff">Next Steps</th>'
+    + '<th style="text-align:center;background:#f0f9ff">Compliance</th>'
+    + '<th style="text-align:center;background:#fef3c7">Today</th>'
+    + '<th style="text-align:center;background:#fef3c7">Yesterday</th>'
+    + '<th style="text-align:center;background:#fef3c7">7 Days</th>'
+    + '<th style="text-align:center;background:#fef3c7">30 Days</th>'
+    + '<th style="text-align:center;background:#fef3c7">All</th>'
+    + '</tr></thead><tbody>';
+
+  agents.forEach(function(a){
+    html += '<tr>'
+      + '<td style="font-weight:600;color:#0a3d5c">'+a.name+'</td>'
+      + '<td style="text-align:center;font-family:Space Mono,monospace;font-size:11px;color:#0a3d5c;font-weight:700">'+a.n+'</td>'
+      + '<td style="text-align:center;font-family:Space Mono,monospace;font-size:10px;color:#10b981">'+a.ib+'</td>'
+      + '<td style="text-align:center;font-family:Space Mono,monospace;font-size:10px;color:#3b82f6">'+a.ob+'</td>'
+      + '<td style="text-align:center;font-family:Space Mono,monospace;font-size:10px;color:#6b7e96">'+a.hours.toFixed(1)+'h</td>'
+      + cell(a.rapport) + cell(a.needs) + cell(a.insurance) + cell(a.conversion) + cell(a.next_steps) + cell(a.compliance)
+      + cell(a.today, true) + cell(a.yesterday, true) + cell(a.week, true) + cell(a.month, true) + cell(a.all, true)
+      + '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('qa-matrix').innerHTML = html;
+}
+
+// SCORE TRENDING — line chart by selected granularity, choose dimension
+function renderQATrend() {
+  var rows = getQAFiltered();
+  var dim = (document.getElementById('qa-trend-dim')||{value:'overall'}).value;
+  var dates = getPeriodDates();
+  var buckets = aggregateDates(dates);
+
+  var data = buckets.map(function(b){
+    var dateSet = new Set(b.dates);
+    var subset = rows.filter(function(a){return dateSet.has(a.dt.slice(0,10));});
+    return avgScores(subset, dim);
+  });
+
+  document.getElementById('qa-trend-wrap').innerHTML = scrollWrap('qa-trend', 240, buckets.length);
+  var dimLabels = {overall:'Overall',rapport:'Rapport',needs:'Needs',insurance:'Insurance',conversion:'Conversion',next_steps:'Next Steps',compliance:'Compliance'};
+  mkChart('qa-trend', {type:'line', data:{
+    labels: buckets.map(function(b){return b.label;}),
+    datasets:[{
+      label: dimLabels[dim] + ' Score',
+      data: data,
+      borderColor: '#0a3d5c',
+      backgroundColor: 'rgba(10,61,92,.08)',
+      borderWidth: 2.5, pointRadius: 4, tension: .3, fill: true,
+      spanGaps: true
+    }]
+  }, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw == null ? 'N/A' : c.raw.toFixed(2)+'/10';}}}},scales:{x:{grid:{display:false},ticks:{font:{family:'Space Mono',size:8},maxRotation:45}},y:{beginAtZero:true,max:10,grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}}}}}});
+}
+
+function renderMethodology() {
+  var html = ''
+    + '<h4 style="font-size:14px;color:#0a3d5c;margin:8px 0 8px 0">How calls are categorized</h4>'
+    + '<p>Every call is auto-categorized using only IVR routing data, transcript content, and call duration — <strong>no human tagging is required</strong>. The category determines which dimensions are scored.</p>'
+    + '<ul style="margin:8px 0 16px 20px"><li><strong>Full Intake</strong> — Caller pressed 1 (Admissions), call lasted 3+ minutes, AND transcript contains 3+ clinical signals (substance mentioned, treatment level discussed, frequency/duration of use, prior treatment history, insurance, scheduling language, or caller-is-patient indicators). All 5 dimensions scored.</li>'
+    + '<li><strong>Admissions Inquiry</strong> — Caller pressed 1 but did not meet Full Intake criteria. These are typically family members, general questions, or callers whose intent did not fully develop. Scored on Rapport, Needs, <strong>Conversion Discovery</strong>, Next Steps, and Compliance. Insurance is N/A.</li>'
+    + '<li><strong>Non-Admissions</strong> — Caller pressed 2 (Building) or was routed to building/reception. Scored on Rapport, Next Steps (routing quality), and Compliance. Insurance and Needs are N/A.</li>'
+    + '<li><strong>Voicemail</strong> — No agent on the line OR call < 45 seconds. Limited scoring on Rapport (caller-side neutral baseline), Needs (boosted), Next Steps, and Compliance.</li>'
+    + '<li><strong>Outbound</strong> — Staff-initiated calls. Bonuses for proper opening identification ("This is X calling from Strive...") and strong call-to-action close. Insurance and Needs are scored only when actually discussed.</li></ul>'
+
+    + '<h4 style="font-size:14px;color:#0a3d5c;margin:16px 0 8px 0">The six scoring dimensions</h4>'
+    + '<ul style="margin:8px 0 16px 20px">'
+    + '<li><strong>Rapport (0–10)</strong> — Counts empathetic phrases ("I understand", "I hear you", "we\'re here", "absolutely") in the agent\'s lines, minus dismissive phrases ("calm down", "like I said"). Score = 5 + ((positive × 1.5) − (negative × 2)) × 0.7, clamped 0–10.</li>'
+    + '<li><strong>Needs Assessment (0–10)</strong> — Counts clinical-relevance terms in transcript: substances (alcohol, opioids, benzo, etc.), treatment levels (detox, IOP, PHP), probing questions (when did you last, daily use, prior treatment), and mental health terms. Score = matches × 1.2, capped at 10.</li>'
+    + '<li><strong>Insurance Verification (0–10)</strong> — Counts insurance language: payers (Medicaid, BCBS, Aetna), coverage terms (member ID, group number, deductible), and verification phrases (do you have insurance, verify benefits). Score = matches × 1.5, capped at 10. <strong>Only scored on Full Intake calls; N/A elsewhere.</strong></li>'
+    + '<li><strong>Conversion Discovery (0–10)</strong> — <strong>New dimension for Admissions Inquiry calls.</strong> Counts discovery-and-conversion language in agent lines: open-ended questions ("what brings you to call", "tell me more"), patient-vs-family probes, transfer/connect language, and capture-info attempts (best number to reach, can I take your name).</li>'
+    + '<li><strong>Next Steps (0–10)</strong> — Counts forward-action terms (schedule, appointment, callback, intake), bonuses for explicit time + day combinations, and concrete commitments. Vague language gets penalized.</li>'
+    + '<li><strong>Compliance (N/A by default)</strong> — Defaults to N/A unless triggered. Negative trigger: PHI exposure patterns (e.g. SSN read aloud). Positive trigger: HIPAA, confidentiality, consent, recording disclosure language. Score = 8 − (flags × 3) + (positive × 0.5), clamped 0–10.</li></ul>'
+
+    + '<h4 style="font-size:14px;color:#0a3d5c;margin:16px 0 8px 0">N/A handling</h4>'
+    + '<p>Dimensions that don\'t apply to a given category are returned as <strong>N/A</strong> and <strong>excluded entirely from the overall score calculation</strong> — they are not zeroed. This ensures fair scoring: a non-admissions receptionist isn\'t penalized for not verifying insurance, because insurance verification is not their job. The overall score is the simple average of the dimensions that <em>are</em> scored for that call.</p>'
+
+    + '<h4 style="font-size:14px;color:#0a3d5c;margin:16px 0 8px 0">Outcome boosters</h4>'
+    + '<p>After dimension scoring, bonuses are applied based on outcome data from CTM:</p>'
+    + '<ul style="margin:8px 0 16px 20px"><li>Disposition contains "scheduled admission" → +1.5</li>'
+    + '<li>Sale outcome = "Yes" → +1.0</li></ul>'
+
+    + '<h4 style="font-size:14px;color:#0a3d5c;margin:16px 0 8px 0">Limitations</h4>'
+    + '<ul style="margin:8px 0 16px 20px">'
+    + '<li>Pattern matching catches the <em>language</em> of quality conversations, not the <em>delivery</em>. Tone of voice, sarcasm, pauses, and personalization (using caller\'s name, referencing what they said) are not captured.</li>'
+    + '<li>Speaker separation in transcripts is heuristic — single-block transcripts are treated as agent + caller mixed.</li>'
+    + '<li>Outbound calls only have data when CTM transcribed them. ~57% of inbound calls have transcripts; the rest are unscored. Voicemails the caller left (inbound) are scored on caller-side content only.</li>'
+    + '<li>Compliance scoring defaults to N/A — absence of compliance language is not penalized; only positive or negative signals affect the score.</li></ul>';
+
+  document.getElementById('qa-methodology').innerHTML = html;
+}
+
+function filterQA() {
+  var rows = getQAFiltered();
+  var q   = (document.getElementById('qa-search')||{value:''}).value.toLowerCase();
+  var ag  = (document.getElementById('qa-agent-sel')||{value:''}).value.toLowerCase();
+  var cat = (document.getElementById('qa-cat-sel')||{value:''}).value;
+  var sort= (document.getElementById('qa-sort-sel')||{value:'best'}).value;
+  rows = rows.filter(function(a){
+    if (cat && a.category !== cat) return false;
+    if (ag && (a.agent || '').toLowerCase().indexOf(ag) < 0) return false;
+    if (q) {
+      var txt = ((a.agent||'')+(a.name||'')+(a.caller||'')+(a.summary||'')+(a.transcript_preview||'')).toLowerCase();
+      if (txt.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+  if (sort === 'best')   rows.sort(function(a,b){var ao=(a.scores.overall==='N/A'?-1:a.scores.overall);var bo=(b.scores.overall==='N/A'?-1:b.scores.overall);return bo-ao;});
+  if (sort === 'worst')  rows.sort(function(a,b){var ao=(a.scores.overall==='N/A'?11:a.scores.overall);var bo=(b.scores.overall==='N/A'?11:b.scores.overall);return ao-bo;});
+  if (sort === 'recent') rows.sort(function(a,b){return b.dt.localeCompare(a.dt);});
+  return rows;
+}
+
+function renderQA(page) {
+  var PS = 25;
+  var items = filterQA();
+  var pages = Math.ceil(items.length / PS);
+  var slice = items.slice((page-1)*PS, page*PS);
+  document.getElementById('qa-chip').textContent = items.length.toLocaleString() + ' CALLS';
+
+  var CAT_LABELS = {full_intake:'FULL INTAKE',admissions_inquiry:'ADM INQUIRY',non_admissions:'NON-ADM',voicemail:'VOICEMAIL',outbound:'OUTBOUND'};
+  var CAT_COLORS = {full_intake:'#10b981',admissions_inquiry:'#3b82f6',non_admissions:'#f59e0b',voicemail:'#94a3b8',outbound:'#0a3d5c'};
+
+  var html = '';
+  slice.forEach(function(a, i) {
+    var idx = (page-1)*PS + i;
+    var s = a.scores;
+    var col = getScoreColor(s.overall);
+    var catLbl = CAT_LABELS[a.category] || 'OTHER';
+    var catCol = CAT_COLORS[a.category] || '#6b7e96';
+    var dirBadge = a.dir === 'outbound' ? '<span style="background:#3b82f6;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;font-family:Space Mono,monospace">OUT</span>' : '<span style="background:#10b981;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;font-family:Space Mono,monospace">IN</span>';
+    var urgentBadge = a.urgent ? '<span style="background:#ef4444;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px">URGENT</span>' : '';
+    var overallTxt = s.overall === 'N/A' ? 'N/A' : s.overall.toFixed(1);
+
+    html += '<div class="qa-item" id="qai'+idx+'" onclick="toggleQA('+idx+')" style="background:#f4f6f9;border:1px solid #e1e7ef;border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;border-left:4px solid '+col+'">';
+    html += '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">';
+    html += '<div style="font-size:22px;font-weight:700;color:'+col+';font-family:Space Mono,monospace;min-width:50px">'+overallTxt+'</div>';
+    html += '<div style="flex:1;min-width:200px">';
+    html += '<div style="font-size:13px;font-weight:600;color:#0a3d5c">'+(a.name || a.caller)+urgentBadge+'</div>';
+    html += '<div style="font-size:10px;color:#6b7e96;font-family:Space Mono,monospace">'+a.dt+' &middot; '+a.duration+'s &middot; '+a.agent+'</div>';
+    html += '</div>';
+    html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+    html += dirBadge;
+    html += '<span style="font-size:9px;background:'+catCol+';color:#fff;padding:2px 6px;border-radius:3px;font-family:Space Mono,monospace">'+catLbl+'</span>';
+    html += '<span class="'+(a.fac==='Fort Wayne'?'fac-fw':'fac-wl')+'">'+(a.fac==='Fort Wayne'?'FW':'WL')+'</span>';
+    html += '</div></div>';
+
+    // Score bar — show all 6 dimensions, N/A handled gracefully
+    html += '<div style="display:flex;gap:4px;margin-top:10px;font-family:Space Mono,monospace;font-size:9px;color:#6b7e96">';
+    [['Rapport',s.rapport],['Needs',s.needs],['Insurance',s.insurance],['Conversion',s.conversion],['Next Steps',s.next_steps],['Compliance',s.compliance]].forEach(function(d) {
+      var dc = getScoreColor(d[1]);
+      var dv = d[1] === 'N/A' || d[1] == null ? 'N/A' : d[1].toFixed(1);
+      html += '<div style="flex:1;text-align:center;padding:4px 6px;background:#fff;border-radius:4px;border:1px solid #e1e7ef"><div style="color:'+dc+';font-weight:700">'+dv+'</div><div style="font-size:8px">'+d[0]+'</div></div>';
+    });
+    html += '</div>';
+
+    // Expanded body
+    html += '<div class="qa-body" id="qab'+idx+'" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid #e1e7ef">';
+    if (a.summary) html += '<div style="background:#fff;border-left:3px solid #0a3d5c;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#0a3d5c;font-style:italic;border-radius:0 6px 6px 0">&#128161; '+a.summary+'</div>';
+
+    if (a.worked && a.worked.length) {
+      html += '<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:700;color:#10b981;margin-bottom:6px">&#10003; What worked</div>';
+      a.worked.forEach(function(w){html+='<div style="font-size:12px;color:#374151;padding:3px 0">&middot; '+w+'</div>';});
+      html += '</div>';
+    }
+    if (a.didnt && a.didnt.length) {
+      html += '<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:700;color:#ef4444;margin-bottom:6px">&#10007; What didn\'t work</div>';
+      a.didnt.forEach(function(w){html+='<div style="font-size:12px;color:#374151;padding:3px 0">&middot; '+w+'</div>';});
+      html += '</div>';
+    }
+    if (a.better && a.better.length) {
+      html += '<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:700;color:#f59e0b;margin-bottom:6px">&#9881; Could work better</div>';
+      a.better.forEach(function(w){html+='<div style="font-size:12px;color:#374151;padding:3px 0">&middot; '+w+'</div>';});
+      html += '</div>';
+    }
+
+    if (a.audio) html += '<a class="play-btn" href="'+a.audio+'" target="_blank" rel="noopener">&#9654; Listen in CTM</a>';
+    if (a.transcript_full) html += '<div style="background:#fff;border:1px solid #e1e7ef;border-radius:6px;padding:10px 14px;margin-top:10px;font-size:11px;line-height:1.7;color:#374151;max-height:240px;overflow-y:auto">'+a.transcript_full.replace(/\n/g,'<br>')+'</div>';
+
+    html += '</div></div>';
+  });
+
+  document.getElementById('qa-list').innerHTML = html || '<div style="padding:40px;text-align:center;color:#6b7e96">No calls match your filters</div>';
+
+  var pg = document.getElementById('qa-pager');
+  if (pages > 1) {
+    pg.innerHTML = (page>1 ? '<button class="pager-btn" onclick="renderQA('+(page-1)+')">&#8592; Prev</button>' : '') +
+      '<span class="pager-info">Page '+page+' of '+pages+' &middot; '+items.length.toLocaleString()+' calls</span>' +
+      (page<pages ? '<button class="pager-btn" onclick="renderQA('+(page+1)+')">Next &#8594;</button>' : '');
+  } else {
+    pg.innerHTML = '';
+  }
+}
+
+function toggleQA(i) {
+  var body = document.getElementById('qab'+i);
+  if (body) body.style.display = body.style.display === 'block' ? 'none' : 'block';
+}
+
+// ── RECORDINGS ────────────────────────────────────────────────────────────
+
+function updateRecKPIs() {
+  var all = RECS.filter(function(r){return FAC==='all'||r.f===(FAC==='fw'?'Fort Wayne':'Waterloo');});
+  document.getElementById('rec-kpis').innerHTML =
+    kpi('Total Recordings', all.length.toLocaleString(), facLabel(), 'navy') +
+    kpi('With AI Summary', RECS.filter(function(r){return r.su;}).length.toLocaleString(), 'Auto-generated', 'blue') +
+    kpi('Fort Wayne', RECS.filter(function(r){return r.f==='Fort Wayne';}).length.toLocaleString(), '92.7%', 'teal') +
+    kpi('Waterloo', RECS.filter(function(r){return r.f==='Waterloo';}).length.toLocaleString(), '7.3%', 'green');
+}
+
+function filterRecs() {
+  var q  = (document.getElementById('rec-search')||{value:''}).value.toLowerCase();
+  var ag = (document.getElementById('rec-agent-sel')||{value:''}).value.toLowerCase();
+  return RECS.filter(function(r){
+    var facOk = FAC==='all'||r.f===(FAC==='fw'?'Fort Wayne':'Waterloo');
+    var txt   = (r.c+r.su+r.tr+r.a+r.p).toLowerCase();
+    return facOk&&(!q||txt.includes(q))&&(!ag||r.a.toLowerCase().includes(ag));
+  });
+}
+
+function renderRecs(page) {
+  var PS = 50, items = filterRecs(), pages = Math.ceil(items.length/PS);
+  var slice = items.slice((page-1)*PS, page*PS);
+  document.getElementById('rec-count').textContent = 'Showing '+(((page-1)*PS)+1)+'\u2013'+Math.min(page*PS,items.length)+' of '+items.length.toLocaleString()+' recordings';
+  document.getElementById('rec-list').innerHTML = slice.map(function(r,i){
+    var idx = (page-1)*PS+i;
+    return '<div class="rec-item" id="ri'+idx+'" onclick="toggleRec('+idx+')">'
+      +'<div class="rec-top"><div class="rec-caller">'+(r.c||r.p)+'</div><div class="rec-time">'+r.t+'</div><div class="rec-dur">'+r.d+'</div>'+(r.a?'<div class="rec-agent">'+r.a+'</div>':'')+'<div style="font-size:10px;color:#6b7e96;padding:2px 7px;background:#f4f6f9;border-radius:4px;border:1px solid #e1e7ef">'+r.s+'</div><span class="'+(r.f==='Fort Wayne'?'fac-fw':'fac-wl')+'">'+(r.f==='Fort Wayne'?'FW':'WL')+'</span></div>'
+      +'<div class="rec-body" id="rb'+idx+'">'+(r.su?'<div class="rec-summary">&#128161; '+r.su+'</div>':'')+(r.au?'<a class="play-btn" href="'+r.au+'" target="_blank" rel="noopener">&#9654; Open in CTM</a>':'<span style="font-size:11px;color:#6b7e96">No recording URL</span>')+(r.tr?'<div class="rec-transcript">'+r.tr.replace(/\n/g,'<br>')+'<br><em style="color:#6b7e96;font-size:10px">...transcript preview</em></div>':'')+'</div>'
+      +'</div>';
+  }).join('');
+  var pg = document.getElementById('rec-pager');
+  pg.innerHTML = pages>1?(page>1?'<button class="pager-btn" onclick="renderRecs('+(page-1)+')">&#8592; Prev</button>':'')+'<span class="pager-info">Page '+page+' of '+pages+'</span>'+(page<pages?'<button class="pager-btn" onclick="renderRecs('+(page+1)+')">Next &#8594;</button>':''):'';
+}
+
+function toggleRec(i) {
+  var item = document.getElementById('ri'+i), body = document.getElementById('rb'+i);
+  if (item) item.classList.toggle('open');
+  if (body) body.classList.toggle('open');
+}
+
+// ── CALL LOG ──────────────────────────────────────────────────────────────
+
+function filterLog() {
+  var q  = (document.getElementById('log-search')||{value:''}).value.toLowerCase();
+  var dir= (document.getElementById('log-dir')||{value:''}).value;
+  var st = (document.getElementById('log-status')||{value:''}).value;
+  var nw = (document.getElementById('log-new')||{value:''}).value==='new';
+  return LOG.filter(function(c){
+    if (!passesIvr(c)) return false;
+    var facOk=FAC==='all'||c.fa===(FAC==='fw'?'Fort Wayne':'Waterloo');
+    var txt=((c.nm||'')+(c.cl||'')+(c.ci||'')+(c.ag||'')+(c.sr||'')).toLowerCase();
+    var stOk=!st||(c.st===st)||(st==='no-answer'&&c.st==='no answer');
+    return facOk&&(!q||txt.includes(q))&&(!dir||c.di===dir)&&stOk&&(!nw||c.nw);
+  });
+}
+
+function renderLog(page) {
+  var PS=100, items=filterLog(), pages=Math.ceil(items.length/PS);
+  var slice=items.slice((page-1)*PS,page*PS);
+  document.getElementById('log-count').textContent='Showing '+(((page-1)*PS)+1)+'\u2013'+Math.min(page*PS,items.length)+' of '+items.length.toLocaleString()+' calls';
+  var dirCls={inbound:'dir-in',outbound:'dir-out'};
+  var stCls=function(s){return ['answered','completed'].includes(s)?'st-ans':['no-answer','busy','missed','no answer'].includes(s)?'st-mis':'st-oth';};
+  document.getElementById('log-body').innerHTML=slice.map(function(c){
+    var ivrLbl = c.ivr === 'admissions' ? 'ADM' : c.ivr === 'building' ? 'BLDG' : c.ivr === 'outbound' ? '—' : 'DIR';
+    var ivrCol = c.ivr === 'admissions' ? '#0a3d5c' : c.ivr === 'building' ? '#f59e0b' : c.ivr === 'direct' ? '#10b981' : '#94a3b8';
+    return '<tr><td style="font-family:Space Mono,monospace;font-size:10px;color:#6b7e96">'+c.dt+'</td>'
+      +'<td><span class="'+(dirCls[c.di]||'dir-in')+'">'+c.di.toUpperCase()+'</span></td>'
+      +'<td><span style="font-family:Space Mono,monospace;font-size:9px;font-weight:700;color:#fff;background:'+ivrCol+';padding:2px 6px;border-radius:3px">'+ivrLbl+'</span></td>'
+      +'<td style="font-family:Space Mono,monospace;font-size:11px;font-weight:700;color:#0a3d5c">'+c.cl+'</td>'
+      +'<td style="font-size:12px">'+c.nm+(c.nw?'<span class="new-badge">NEW</span>':'')+'</td>'
+      +'<td style="font-size:11px;color:#6b7e96">'+c.ci+(c.sa?', '+c.sa:'')+'</td>'
+      +'<td style="font-size:11px;color:#6b7e96">'+c.sr+'</td>'
+      +'<td style="font-size:11px;color:#6b7e96">'+(c.ag||'—')+'</td>'
+      +'<td style="font-family:Space Mono,monospace;font-size:10px;color:#6b7e96">'+fmtDur(c.du)+'</td>'
+      +'<td><span class="'+stCls(c.st)+'" style="font-family:Space Mono,monospace;font-size:10px;font-weight:700">'+c.st+'</span></td>'
+      +'<td><span class="'+(c.fa==='Fort Wayne'?'fac-fw':'fac-wl')+'">'+(c.fa==='Fort Wayne'?'FW':'WL')+'</span></td>'
+      +'<td>'+(c.tr?'<span class="t-badge">T</span>':'—')+'</td></tr>';
+  }).join('');
+  var pg=document.getElementById('log-pager');
+  pg.innerHTML=pages>1?(page>1?'<button class="pager-btn" onclick="renderLog('+(page-1)+')">&#8592; Prev</button>':'')+'<span class="pager-info">Page '+page+' of '+pages+' &middot; '+items.length.toLocaleString()+' results</span>'+(page<pages?'<button class="pager-btn" onclick="renderLog('+(page+1)+')">Next &#8594;</button>':''):'';
+}
+
+// ── FORMS ─────────────────────────────────────────────────────────────────
+
+function buildFormCharts() {
+  var periodDates = new Set(getPeriodDates());
+  var fms = FORMS.filter(function(f){
+    if(FAC!=='all'&&f.fa!==(FAC==='fw'?'Fort Wayne':'Waterloo')) return false;
+    if(PERIOD!=='all'&&!periodDates.has(f.dt.slice(0,10))) return false;
+    return true;
+  });
+  var fw=fms.filter(function(f){return f.fa==='Fort Wayne';}).length;
+  var wl=fms.filter(function(f){return f.fa==='Waterloo';}).length;
+  var nw=fms.filter(function(f){return f.nw;}).length;
+
+  document.getElementById('fm-kpis').innerHTML =
+    kpi('Form Leads', fms.length, 'Selected period', 'navy') +
+    kpi('Fort Wayne', fw, (fms.length>0?(fw/fms.length*100).toFixed(1):0)+'%', 'teal') +
+    kpi('Waterloo',   wl, (fms.length>0?(wl/fms.length*100).toFixed(1):0)+'%', 'blue') +
+    kpi('New Contacts', nw, (fms.length>0?(nw/fms.length*100).toFixed(1):0)+'% new', 'green');
+
+  var dateCounts={};
+  fms.forEach(function(f){var d=f.dt.slice(0,10);dateCounts[d]=(dateCounts[d]||0)+1;});
+  var sortedDates=Object.keys(dateCounts).sort();
+  document.getElementById('form-daily-wrap').innerHTML=scrollWrap('form-daily',180,sortedDates.length);
+  mkChart('form-daily',{type:'bar',data:{
+    labels:sortedDates.map(function(d){var p=d.split('-');return parseInt(p[1])+'/'+parseInt(p[2]);}),
+    datasets:[{label:'Form Leads',data:sortedDates.map(function(d){return dateCounts[d]||0;}),backgroundColor:'rgba(10,61,92,.7)',borderRadius:5,borderSkipped:false}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{family:'Space Mono',size:9},maxRotation:45}},y:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}},beginAtZero:true,stepSize:1}}}});
+  mkChart('form-fac',{type:'doughnut',data:{labels:['Fort Wayne','Waterloo'],datasets:[{data:[fw,wl],backgroundColor:['#0a3d5c','#3dffc0'],borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:10}}}}});
+}
+
+function renderForms() {
+  var q = (document.getElementById('form-search')||{value:''}).value.toLowerCase();
+  var periodDates = new Set(getPeriodDates());
+  var fm = FORMS.filter(function(f){
+    if(FAC!=='all'&&f.fa!==(FAC==='fw'?'Fort Wayne':'Waterloo')) return false;
+    if(PERIOD!=='all'&&!periodDates.has(f.dt.slice(0,10))) return false;
+    if(q&&!((f.n+f.e+f.ph+f.hw+f.ci).toLowerCase().includes(q))) return false;
+    return true;
+  });
+  fm.sort(function(a,b){return b.dt.localeCompare(a.dt);});
+  document.getElementById('fm-chip').textContent = fm.length + ' RESULTS';
+  document.getElementById('forms-tbody').innerHTML=fm.map(function(f){
+    return '<tr><td style="font-family:Space Mono,monospace;font-size:10px;color:#6b7e96;white-space:nowrap">'+f.dt+'</td>'
+      +'<td style="font-size:12px;font-weight:600;color:#0a3d5c">'+f.n+'</td>'
+      +'<td style="font-size:12px;color:#374151;max-width:260px;white-space:normal;line-height:1.4">'+(f.hw||'<span style="color:#aaa;font-style:italic">\u2014</span>')+'</td>'
+      +'<td style="font-family:Space Mono,monospace;font-size:11px;color:#0a3d5c">'+f.ph+'</td>'
+      +'<td style="font-size:11px;color:#6b7e96">'+f.e+'</td>'
+      +'<td style="font-size:11px;color:#6b7e96">'+(f.ci?f.ci+(f.st?', '+f.st:''):'—')+'</td>'
+      +'<td style="font-size:11px;color:#6b7e96">'+f.sr+'</td>'
+      +'<td><span class="'+(f.fa==='Fort Wayne'?'fac-fw':'fac-wl')+'">'+f.fa+'</span></td>'
+      +'<td>'+(f.nw?'<span class="new-pill">NEW</span>':'<span class="ret-pill">RETURN</span>')+'</td></tr>';
+  }).join('');
+}
+
+// ── MARKETING ────────────────────────────────────────────────────────────
+
+function buildMarketing() {
+  var dates   = getPeriodDates();
+  var buckets = aggregateDates(dates);
+  var labels  = buckets.map(function(b){return b.label;});
+  var total   = dates.reduce(function(s,d){return s+agg([d],'total');},0);
+  var nw      = dates.reduce(function(s,d){return s+agg([d],'new');},0);
+  var yes     = dates.reduce(function(s,d){return s+(DAILY[d]?DAILY[d].yes||0:0);},0);
+  var no      = dates.reduce(function(s,d){return s+(DAILY[d]?DAILY[d].no||0:0);},0);
+  var disp    = FAC==='fw'?(MKT.disp_by_fac['Fort Wayne']||{}):FAC==='wl'?(MKT.disp_by_fac['Waterloo']||{}):MKT.disposition;
+  var preA    = disp['conducted pre-assessment']||0;
+  var dispTot = Object.values(disp).reduce(function(a,b){return a+b;},0);
+
+  document.getElementById('mkt-kpis').innerHTML =
+    kpi('Total Calls',     total.toLocaleString(), facLabel(), 'navy') +
+    kpi('New Callers',     nw.toLocaleString(),    'Unique new leads', 'green') +
+    kpi('Lead Score: Yes', yes,                    'AI-scored leads', 'teal') +
+    kpi('Lead Score: No',  no,                     'Scored non-leads', 'red') +
+    kpi('Pre-Assessments', preA, (dispTot>0?(preA/dispTot*100).toFixed(1):0)+'% of dispositioned', 'blue');
+
+  document.getElementById('mkt-trend-wrap').innerHTML=scrollWrap('mkt-trend',200,buckets.length);
+  mkChart('mkt-trend',{type:'line',data:{labels:labels,datasets:[
+    {label:'Total',  data:buckets.map(function(b){return agg(b.dates,'total');}),   borderColor:'#0a3d5c',backgroundColor:'rgba(10,61,92,.06)',  borderWidth:2.5,pointRadius:3,tension:.3,fill:true},
+    {label:'Inbound',data:buckets.map(function(b){return agg(b.dates,'inbound');}), borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.04)',borderWidth:2,pointRadius:2,tension:.3,fill:false},
+    {label:'New',    data:buckets.map(function(b){return agg(b.dates,'new');}),     borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.04)',borderWidth:2,pointRadius:2,tension:.3,fill:false},
+    {label:'Missed', data:buckets.map(function(b){return agg(b.dates,'missed');}),  borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.04)', borderWidth:1.5,pointRadius:2,tension:.3,fill:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:10}}},scales:{x:{grid:{display:false},ticks:{font:{family:'Space Mono',size:8},maxRotation:45}},y:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}}}}}});
+
+  document.getElementById('mkt-yesno-wrap').innerHTML=scrollWrap('mkt-yesno',200,buckets.length);
+  mkChart('mkt-yesno',{type:'bar',data:{labels:labels,datasets:[
+    {label:'Yes',data:buckets.map(function(b){return b.dates.reduce(function(s,d){return s+(DAILY[d]?DAILY[d].yes||0:0);},0);}),backgroundColor:'rgba(16,185,129,.75)',borderRadius:4,borderSkipped:false},
+    {label:'No', data:buckets.map(function(b){return b.dates.reduce(function(s,d){return s+(DAILY[d]?DAILY[d].no||0:0);},0);}), backgroundColor:'rgba(239,68,68,.55)', borderRadius:4,borderSkipped:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:10}}},scales:{x:{grid:{display:false},ticks:{font:{family:'Space Mono',size:8},maxRotation:45}},y:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}},beginAtZero:true}}}});
+
+  var dispE=Object.keys(disp).map(function(k){return [k,disp[k]];}).sort(function(a,b){return b[1]-a[1];});
+  var dColors=['#0a3d5c','#3dffc0','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#10b981'];
+  mkChart('mkt-disp',{type:'doughnut',data:{labels:dispE.map(function(p){return p[0];}),datasets:[{data:dispE.map(function(p){return p[1];}),backgroundColor:dColors,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:10,padding:8}},tooltip:{callbacks:{label:function(c){return ' '+c.label+': '+c.raw;}}}}}});
+
+  document.getElementById('mkt-score-wrap').innerHTML=scrollWrap('mkt-score',180,buckets.length);
+  mkChart('mkt-score',{type:'bar',data:{labels:labels,datasets:[
+    {label:'Yes', data:buckets.map(function(b){return b.dates.reduce(function(s,d){return s+(DAILY[d]?DAILY[d].yes||0:0);},0);}),  backgroundColor:'rgba(16,185,129,.75)',borderRadius:3,borderSkipped:false},
+    {label:'No',  data:buckets.map(function(b){return b.dates.reduce(function(s,d){return s+(DAILY[d]?DAILY[d].no||0:0);},0);}),   backgroundColor:'rgba(239,68,68,.55)', borderRadius:3,borderSkipped:false},
+    {label:'Lead',data:buckets.map(function(b){return b.dates.reduce(function(s,d){return s+(DAILY[d]?DAILY[d].lead||0:0);},0);}), backgroundColor:'rgba(59,130,246,.6)', borderRadius:3,borderSkipped:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:10}}},scales:{x:{stacked:true,grid:{display:false},ticks:{font:{family:'Space Mono',size:8},maxRotation:45}},y:{stacked:true,grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}},beginAtZero:true}}}});
+
+  var pgE=Object.keys(MKT.pages).map(function(k){return [k,MKT.pages[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
+  mkChart('mkt-pages',{type:'bar',data:{labels:pgE.map(function(p){return p[0].length>38?p[0].slice(0,36)+'\u2026':p[0];}),datasets:[{label:'Calls',data:pgE.map(function(p){return p[1];}),backgroundColor:'rgba(10,61,92,.7)',borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}}},y:{grid:{display:false},ticks:{font:{family:'Space Mono',size:9}}}}}});
+
+  var rfE=Object.keys(MKT.refs).map(function(k){return [k,MKT.refs[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,8);
+  mkChart('mkt-refs',{type:'bar',data:{labels:rfE.map(function(p){return p[0];}),datasets:[{label:'Calls',data:rfE.map(function(p){return p[1];}),backgroundColor:rfE.map(function(_,i){return i===0?'#0a3d5c':i===1?'#3b82f6':'rgba(61,255,192,.7)';}),borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(225,231,239,.6)'},ticks:{font:{family:'Space Mono',size:9}}},y:{grid:{display:false},ticks:{font:{family:'Space Mono',size:9}}}}}});
+
+  renderNotes();
+}
+
+function renderNotes() {
+  var q  = (document.getElementById('notes-search')||{value:''}).value.toLowerCase();
+  var ns = MKT.notes.filter(function(n){
+    var facOk=FAC==='all'||n.fa===(FAC==='fw'?'Fort Wayne':'Waterloo');
+    return facOk&&(!q||(n.n+n.ag).toLowerCase().includes(q));
+  });
+  document.getElementById('notes-chip').textContent = ns.length + ' NOTES';
+  document.getElementById('notes-tbody').innerHTML = ns.map(function(n, i) {
+    var preview  = n.n.length > 80 ? n.n.slice(0, 80) + '\u2026' : n.n;
+    var hasMore  = n.n.length > 80;
+    var facCls   = n.fa === 'Fort Wayne' ? 'fac-fw' : 'fac-wl';
+    var facLbl   = n.fa === 'Fort Wayne' ? 'FW' : 'WL';
+    var expSpan  = hasMore ? '<span class="note-expand-icon">\u25bc expand</span>' : '';
+    var fullSpan = hasMore ? '<span class="note-full">' + n.n + '</span>' : '';
+    return '<tr class="note-row" id="note-' + i + '" onclick="toggleNote(' + i + ')">'
+      + '<td style="font-family:Space Mono,monospace;font-size:10px;color:#6b7e96;white-space:nowrap;vertical-align:top;padding-top:10px">' + n.dt + '</td>'
+      + '<td style="font-size:11px;font-weight:600;color:#0a3d5c;white-space:nowrap;vertical-align:top;padding-top:10px">' + (n.ag || '\u2014') + '</td>'
+      + '<td style="vertical-align:top;padding-top:10px"><span class="' + facCls + '">' + facLbl + '</span></td>'
+      + '<td class="note-cell"><span class="note-preview">' + preview + expSpan + '</span>' + fullSpan + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function toggleNote(i) {
+  var row = document.getElementById('note-' + i);
+  if (row) row.classList.toggle('expanded');
+}
+
+// ── REFRESH + BOOT ────────────────────────────────────────────────────────
+
+function doRefresh() {
+  var btn = document.querySelector('.btn-refresh');
+  var sp  = document.getElementById('spinEl');
+  btn.disabled = true; sp.classList.add('go');
+  setTimeout(function() {
+    document.getElementById('syncLbl').textContent = 'Synced: ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    btn.disabled = false; sp.classList.remove('go');
+  }, 1200);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('syncLbl').textContent = 'Synced: ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  buildTabNav();
+  buildCtrlBars();
+  buildOverview();
+  CHARTS['built_overview'] = true;
+});
+</script>
+</body>
+</html>

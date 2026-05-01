@@ -1,0 +1,24 @@
+name: Dashboard Refresh
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+    - cron: "0 12 * * *"
+    - cron: "0 16 * * *"
+    - cron: "0 21 * * *"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run full refresh pipeline
+        env:
+          CTM_AUTH: ${{ secrets.CTM_AUTH }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: python refresh_dashboard.py
