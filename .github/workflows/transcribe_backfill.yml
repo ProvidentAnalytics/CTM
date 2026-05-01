@@ -39,7 +39,7 @@ jobs:
         with:
           name: backfill-transcripts
           path: data_backfill_transcripts.json
-          retention-days: 30
+          retention-days: 90
 
       - name: Commit transcripts
         if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -49,6 +49,8 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git
-          git add data_backfill_transcripts.json
+          mkdir -p transcripts
+          cp data_backfill_transcripts.json transcripts/data_backfill_transcripts.json
+          git add data_backfill_transcripts.json transcripts/data_backfill_transcripts.json
           git diff --cached --quiet || git commit -m "backfill: add transcripts $(date -u +%Y-%m-%d)"
           git push
