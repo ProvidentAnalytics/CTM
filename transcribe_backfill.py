@@ -58,8 +58,11 @@ def needs_transcript(c):
 def get_audio_url(c):
     return c.get("audio") or c.get("recording_url") or c.get("record_url") or ""
 
+_debug_done = False  # print debug info for first call only
+
 def whisper_transcribe(audio_url, call_id):
     """Download audio from CTM then transcribe via OpenAI Whisper SDK."""
+    global _debug_done
     from openai import OpenAI
 
     # Download audio
@@ -69,13 +72,27 @@ def whisper_transcribe(audio_url, call_id):
     })
     with urllib.request.urlopen(req, timeout=60) as r:
         audio_bytes = r.read()
+        content_type = r.headers.get("Content-Type", "unknown")
+
+    if not _debug_done:
+        print(f"  DEBUG call {call_id}:")
+        print(f"    audio_url    : {audio_url[:80]}")
+        print(f"    content-type : {content_type}")
+        print(f"    size (bytes) : {len(audio_bytes)}")
+        print(f"    first 16 hex : {audio_bytes[:16].hex()}")
+        _debug_done = True
 
     if len(audio_bytes) < 100:
         raise ValueError(f"Audio too small ({len(audio_bytes)} bytes) — likely empty or auth-gated")
 
-    # Detect suffix from URL
+    # Detect suffix from URL, fall back to content-type
     url_clean = audio_url.lower().split("?")[0]
-    suffix = next((s for s in (".mp3", ".mp4", ".wav", ".m4a", ".ogg", ".webm") if url_clean.endswith(s)), ".mp3")
+    suffix = next((s for s in (".mp3", ".mp4", ".wav", ".m4a", ".ogg", ".webm") if url_clean.endswith(s)), None)
+    if not suffix:
+        if "wav"  in content_type: suffix = ".wav"
+        elif "mp4" in content_type: suffix = ".mp4"
+        elif "ogg" in content_type: suffix = ".ogg"
+        else:                        suffix = ".mp3"
 
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(audio_bytes)
@@ -83,7 +100,6 @@ def whisper_transcribe(audio_url, call_id):
 
     try:
         client = OpenAI(api_key=OPENAI_KEY)
-        # Retry up to 5 times on rate limit
         for attempt in range(5):
             try:
                 with open(tmp_path, "rb") as f:
@@ -94,8 +110,10 @@ def whisper_transcribe(audio_url, call_id):
                     )
                 return result.text.strip()
             except Exception as e:
-                err = str(e)
-                if "429" in err and attempt < 4:
+                err_msg = str(e)
+                if not _debug_done or attempt == 0:
+                    print(f"  DEBUG OpenAI error: {err_msg}")
+                if "429" in err_msg and attempt < 4:
                     wait = 20 * (2 ** attempt)
                     time.sleep(wait)
                 else:
